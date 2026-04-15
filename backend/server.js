@@ -1,35 +1,27 @@
 /**
  * File: server.js
- * Purpose: Entry point for the backend server.
- * Sets up Express, connects to MongoDB, registers all routes, and starts the server.
+ * Purpose: Entry point — connects to MongoDB, seeds catalog, registers all routes.
  */
 
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-const connectDB = require('./config/db');
+const express     = require('express');
+const cors        = require('cors');
+const dotenv      = require('dotenv');
+const connectDB   = require('./config/db');
+const seedCatalog = require('./utils/seedCatalog');
 
-// Load environment variables from .env file
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB then seed the catalog with default skills + wilayas
+connectDB().then(() => seedCatalog());
 
-// Initialize Express application
 const app = express();
 
-// --- Middleware ---
-// Allow cross-origin requests from the React frontend
+// ── Middleware ──
 app.use(cors({ origin: 'http://localhost:5173' }));
-
-// Parse incoming JSON requests
 app.use(express.json());
-
-// Serve generated PDFs statically from the uploads folder
 app.use('/uploads', express.static('uploads'));
 
-// --- Routes ---
-// Registering all API routes
+// ── Routes ──
 app.use('/api/auth',          require('./routes/authRoutes'));
 app.use('/api/student',       require('./routes/studentRoutes'));
 app.use('/api/company',       require('./routes/companyRoutes'));
@@ -39,9 +31,10 @@ app.use('/api/admin',         require('./routes/adminRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/documents',     require('./routes/documentRoutes'));
 
-// Basic health check endpoint
-app.get('/', (req, res) => res.send('Stag.io API is running'));
+// ── NEW: public catalog (skills + wilayas readable by everyone) ──
+app.use('/api/catalog',       require('./routes/catalogRoutes'));
 
-// --- Server Start ---
+app.get('/', (req, res) => res.send('Stag.io API is running ✅'));
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

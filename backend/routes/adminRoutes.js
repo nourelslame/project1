@@ -1,12 +1,11 @@
 /**
  * File: routes/adminRoutes.js
- * Purpose: Routing for admin operations.
- * Protected routes requiring the ADMIN role.
+ * Purpose: Admin routes — skills and wilayas now use MongoDB _id for deletion.
  */
 
 const express = require('express');
-const router = express.Router();
-const { 
+const router  = express.Router();
+const {
   getPendingApplications,
   validateApplication,
   rejectApplication,
@@ -14,43 +13,42 @@ const {
   getStudents,
   getCompanies,
   toggleBanUser,
+  getValidatedApplications,
   getSkills,
   addSkill,
   removeSkill,
   getWilayas,
   addWilaya,
   removeWilaya,
-  getValidatedApplications
 } = require('../controllers/adminController');
-const auth = require('../middleware/auth');
+const auth  = require('../middleware/auth');
 const roles = require('../middleware/roles');
 
-// All routes require authentication and ADMIN role
 router.use(auth);
 router.use(roles('ADMIN'));
 
-// Administrative views
-router.get('/pending', getPendingApplications);
+// Views
+router.get('/pending',   getPendingApplications);
 router.get('/validated', getValidatedApplications);
-router.get('/stats', getStats);
-router.get('/users/students', getStudents);
+router.get('/stats',     getStats);
+router.get('/users/students',  getStudents);
 router.get('/users/companies', getCompanies);
 
-// Application validation workflows
+// Validation workflows
 router.put('/validate/:appId', validateApplication);
-router.put('/reject/:appId', rejectApplication);
+router.put('/reject/:appId',   rejectApplication);
 
-// User management (dummy ban toggle)
+// User management
 router.put('/users/:userId/ban', toggleBanUser);
 
-// Platform configuration: Skills
-router.get('/skills', getSkills);
-router.post('/skills', addSkill);
-router.delete('/skills/:name', removeSkill);
+// Skills — delete by MongoDB _id (not by name)
+router.get('/skills',       getSkills);
+router.post('/skills',      addSkill);
+router.delete('/skills/:id', removeSkill);   // :id = MongoDB _id
 
-// Platform configuration: Wilayas
-router.get('/wilayas', getWilayas);
-router.post('/wilayas', addWilaya);
-router.delete('/wilayas/:id', removeWilaya);
+// Wilayas — delete by MongoDB _id
+router.get('/wilayas',        getWilayas);
+router.post('/wilayas',       addWilaya);
+router.delete('/wilayas/:id', removeWilaya); // :id = MongoDB _id
 
 module.exports = router;

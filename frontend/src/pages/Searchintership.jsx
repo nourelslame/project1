@@ -1,10 +1,12 @@
 // src/pages/Searchintership.jsx
+// Search Internships — filters use real skills/wilayas from the catalog API.
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
 import { SearchIcon, DocIcon, ChartIcon, GradCapIcon, BuildingIcon, ArrowRight } from '../components/Icons';
 import api from '../api/axios';
+import { useCatalog } from '../hooks/useCatalog';
 import { useAuth } from '../context/AuthContext';
 
 function FilterChip({ label, active, onClick }) {
@@ -23,7 +25,7 @@ function InternshipCard({ internship, onApply, applied }) {
           <p className="internship-card__company"><BuildingIcon />{internship.companyId?.name || 'Company'}</p>
         </div>
         <span className={`internship-card__type internship-card__type--${internship.type?.toLowerCase()}`}>
-          {internship.type === 'TECHNICAL' ? 'Technical' : internship.type === 'RESEARCH' ? 'Research' : internship.type === 'COMMERCIAL' ? 'Commercial' : internship.type}
+          {internship.type}
         </span>
       </div>
       <p className="internship-card__description">{internship.description}</p>
@@ -38,11 +40,8 @@ function InternshipCard({ internship, onApply, applied }) {
         <span className="internship-card__deadline">Deadline: {new Date(internship.deadline).toLocaleDateString()}</span>
       </div>
       <div className="hhh">
-        <Btn
-          variant={applied ? 'outline' : 'primary'}
-          onClick={() => !applied && onApply(internship._id)}
-          style={{ opacity: applied ? 0.6 : 1 }}
-        >
+        <Btn variant={applied ? 'outline' : 'primary'} onClick={() => !applied && onApply(internship._id)}
+          style={{ opacity: applied ? 0.7 : 1 }}>
           {applied ? 'Applied ✓' : 'Apply Now'}
         </Btn>
       </div>
@@ -54,27 +53,28 @@ export default function SearchInternships() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const [internships, setInternships] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [appliedIds, setAppliedIds]   = useState(new Set());
-  const [searchQuery, setSearchQuery] = useState('');
+  // ── Real catalog from backend ──
+  const { skills: catalogSkills, wilayas: catalogWilayas, loading: catalogLoading } = useCatalog();
+
+  const [internships, setInternships]       = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [appliedIds, setAppliedIds]         = useState(new Set());
+  const [searchQuery, setSearchQuery]       = useState('');
   const [selectedWilaya, setSelectedWilaya] = useState('all');
   const [selectedType, setSelectedType]     = useState('all');
   const [selectedSkills, setSelectedSkills] = useState([]);
 
-  const wilayas = ['All', 'Sétif', 'Algiers', 'Oran', 'Constantine', 'Annaba', 'Batna', 'Béjaïa'];
-  const types   = ['All', 'TECHNICAL', 'RESEARCH', 'COMMERCIAL', 'OTHER'];
-  const availableSkills = ['React', 'Node.js', 'Python', 'Java', 'JavaScript', 'Django', 'Laravel', 'Vue.js', 'Docker', 'AWS'];
+  const types = ['All', 'TECHNICAL', 'RESEARCH', 'COMMERCIAL', 'OTHER'];
 
-  // Build query string and fetch offers from backend
+  // ── Fetch offers using real filter values ──
   const fetchOffers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedWilaya !== 'all')      params.set('wilaya', selectedWilaya);
-      if (selectedType !== 'all')        params.set('type', selectedType);
-      if (searchQuery)                   params.set('keyword', searchQuery);
-      if (selectedSkills.length > 0)     params.set('skills', selectedSkills.join(','));
+      if (selectedWilaya !== 'all') params.set('wilaya',  selectedWilaya);
+      if (selectedType   !== 'all') params.set('type',    selectedType);
+      if (searchQuery)              params.set('keyword', searchQuery);
+      if (selectedSkills.length)    params.set('skills',  selectedSkills.join(','));
       const res = await api.get(`/student/offers?${params.toString()}`);
       setInternships(res.data.data || []);
     } catch (err) {
@@ -86,13 +86,12 @@ export default function SearchInternships() {
 
   useEffect(() => { fetchOffers(); }, [fetchOffers]);
 
-  // Apply to an internship offer
   const handleApply = async (offerId) => {
     try {
       await api.post(`/applications/${offerId}`);
       setAppliedIds(prev => new Set([...prev, offerId]));
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to apply. Please try again.');
+      alert(err.response?.data?.message || 'Failed to apply.');
     }
   };
 
@@ -126,10 +125,7 @@ export default function SearchInternships() {
         </nav>
         <div className="sidebar__user">
           <div className="sidebar__avatar">S</div>
-          <div className="sidebar__user-info">
-            <div className="sidebar__user-name">Student</div>
-            <div className="sidebar__user-role">Student</div>
-          </div>
+          <div className="sidebar__user-info"><div className="sidebar__user-name">Student</div></div>
           <button className="sidebar__logout" onClick={() => { logout(); navigate('/'); }} title="Logout">
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -155,22 +151,26 @@ export default function SearchInternships() {
         <div className="search-bar-section">
           <div className="search-bar">
             <SearchIcon />
-            <input type="text" className="search-bar__input" placeholder="Search by title, company, or keyword..."
+            <input type="text" className="search-bar__input"
+              placeholder="Search by title, company, or keyword..."
               value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters — populated from real catalog */}
         <div className="search-filters">
+          {/* Location filter */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Location</h3>
             <div className="search-filter-chips">
-              {wilayas.map(w => (
-                <FilterChip key={w} label={w} active={selectedWilaya === (w === 'All' ? 'all' : w)}
-                  onClick={() => setSelectedWilaya(w === 'All' ? 'all' : w)} />
+              <FilterChip label="All" active={selectedWilaya === 'all'} onClick={() => setSelectedWilaya('all')} />
+              {catalogWilayas.map(w => (
+                <FilterChip key={w} label={w} active={selectedWilaya === w} onClick={() => setSelectedWilaya(w)} />
               ))}
             </div>
           </div>
+
+          {/* Type filter */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Type</h3>
             <div className="search-filter-chips">
@@ -181,10 +181,12 @@ export default function SearchInternships() {
               ))}
             </div>
           </div>
+
+          {/* Skills filter — from real catalog */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Skills</h3>
             <div className="search-filter-chips">
-              {availableSkills.map(skill => (
+              {catalogSkills.map(skill => (
                 <FilterChip key={skill} label={skill} active={selectedSkills.includes(skill)}
                   onClick={() => handleSkillToggle(skill)} />
               ))}
@@ -199,13 +201,12 @@ export default function SearchInternships() {
         </div>
 
         <div className="search-results">
-          {loading ? (
-            <div className="loading-text">Loading offers...</div>
+          {loading || catalogLoading ? (
+            <div className="loading-text">Loading...</div>
           ) : internships.length > 0 ? (
             internships.map(offer => (
               <InternshipCard key={offer._id} internship={offer}
-                onApply={handleApply}
-                applied={appliedIds.has(offer._id)} />
+                onApply={handleApply} applied={appliedIds.has(offer._id)} />
             ))
           ) : (
             <div className="search-empty">

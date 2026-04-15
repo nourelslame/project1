@@ -1,4 +1,5 @@
 // src/pages/Companyoffers.jsx
+// Manage Offers — skill chips and wilaya dropdown use real catalog from backend.
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
@@ -7,15 +8,14 @@ import NotificationBell from '../components/NotificationBell';
 import { FieldLabel } from '../components/Input';
 import { ArrowRight, ChartIcon, BuildingIcon, CheckIcon, SearchIcon, UsersIcon, BriefcaseIcon } from '../components/Icons';
 import api from '../api/axios';
+import { useCatalog } from '../hooks/useCatalog';
 import { useAuth } from '../context/AuthContext';
 
 const TrashIcon = () => <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>;
 const EditIcon  = () => <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
 const PlusIcon  = () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>;
 
-const ALL_SKILLS = ['React','Vue.js','Angular','Next.js','Node.js','Express','Django','FastAPI','Laravel','Spring Boot','Python','Java','JavaScript','TypeScript','PHP','C++','MongoDB','PostgreSQL','MySQL','Firebase','Docker','Git','Linux','AWS','React Native','Flutter'];
-const wilayas = ['Algiers','Sétif','Oran','Constantine','Annaba','Batna','Béjaïa','Blida','Tizi Ouzou','Jijel'];
-const emptyOffer = { title: '', description: '', requiredSkills: [], wilaya: 'Algiers', duration: 3, slots: 1, deadline: '', type: 'TECHNICAL', status: 'OPEN', startDate: '' };
+const emptyOffer = { title: '', description: '', requiredSkills: [], wilaya: '', duration: 3, slots: 1, deadline: '', type: 'TECHNICAL', status: 'OPEN', startDate: '' };
 
 const navItems = [
   { id: 'dashboard',  label: 'Dashboard',    icon: <ChartIcon /> },
@@ -28,6 +28,9 @@ export default function CompanyOffers() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
+  // ── Real catalog ──
+  const { skills: catalogSkills, wilayas: catalogWilayas } = useCatalog();
+
   const [offers, setOffers]         = useState([]);
   const [loading, setLoading]       = useState(true);
   const [filterStatus, setFilter]   = useState('all');
@@ -38,30 +41,42 @@ export default function CompanyOffers() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [saving, setSaving]         = useState(false);
 
-  // Load company's offers from backend
   useEffect(() => {
-    const fetchOffers = async () => {
-      try {
-        const res = await api.get('/company/offers');
-        setOffers(res.data.data || []);
-      } catch (err) { console.error(err.message); }
-      finally { setLoading(false); }
-    };
-    fetchOffers();
+    api.get('/company/offers')
+      .then(res => setOffers(res.data.data || []))
+      .catch(err => console.error(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredOffers = offers.filter(o => filterStatus === 'all' ? true : o.status === filterStatus.toUpperCase());
+  const filteredOffers = offers.filter(o =>
+    filterStatus === 'all' ? true : o.status === filterStatus.toUpperCase()
+  );
 
-  const openNew = () => { setEditingId(null); setFormData(emptyOffer); setSkillSearch(''); setShowModal(true); };
-  const openEdit = (offer) => {
-    setEditingId(offer._id);
-    setFormData({ title: offer.title, description: offer.description, requiredSkills: offer.requiredSkills || [], wilaya: offer.wilaya, duration: offer.duration, slots: offer.slots, deadline: offer.deadline?.slice(0,10) || '', type: offer.type, status: offer.status, startDate: offer.startDate?.slice(0,10) || '' });
-    setSkillSearch(''); setShowModal(true);
+  const openNew = () => {
+    setEditingId(null);
+    // Set default wilaya to first in catalog
+    setFormData({ ...emptyOffer, wilaya: catalogWilayas[0] || '' });
+    setSkillSearch('');
+    setShowModal(true);
   };
 
-  // Create or update an offer
+  const openEdit = (offer) => {
+    setEditingId(offer._id);
+    setFormData({
+      title: offer.title, description: offer.description,
+      requiredSkills: offer.requiredSkills || [],
+      wilaya: offer.wilaya, duration: offer.duration,
+      slots: offer.slots, deadline: offer.deadline?.slice(0, 10) || '',
+      type: offer.type, status: offer.status,
+      startDate: offer.startDate?.slice(0, 10) || '',
+    });
+    setSkillSearch('');
+    setShowModal(true);
+  };
+
   const handleSave = async () => {
     if (!formData.title.trim()) { alert('Title is required.'); return; }
+    if (!formData.wilaya)       { alert('Please select a wilaya.'); return; }
     setSaving(true);
     try {
       if (editingId) {
@@ -77,7 +92,6 @@ export default function CompanyOffers() {
     } finally { setSaving(false); }
   };
 
-  // Delete an offer
   const handleDelete = async (id) => {
     try {
       await api.delete(`/offers/${id}`);
@@ -89,10 +103,18 @@ export default function CompanyOffers() {
   };
 
   const toggleSkill = (sk) => setFormData(f => ({
-    ...f, requiredSkills: f.requiredSkills.includes(sk) ? f.requiredSkills.filter(s => s !== sk) : [...f.requiredSkills, sk]
+    ...f,
+    requiredSkills: f.requiredSkills.includes(sk)
+      ? f.requiredSkills.filter(s => s !== sk)
+      : [...f.requiredSkills, sk],
   }));
+
   const upd = (key, val) => setFormData(f => ({ ...f, [key]: val }));
-  const filteredSkills = ALL_SKILLS.filter(sk => sk.toLowerCase().includes(skillSearch.toLowerCase()));
+
+  // Filter catalog skills by search query in modal
+  const filteredCatalogSkills = catalogSkills.filter(sk =>
+    sk.toLowerCase().includes(skillSearch.toLowerCase())
+  );
 
   return (
     <div className="dashboard">
@@ -135,24 +157,21 @@ export default function CompanyOffers() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="applications-stats">
           <div className="app-stat"><div className="app-stat__value">{offers.length}</div><div className="app-stat__label">Total Offers</div></div>
           <div className="app-stat app-stat--green"><div className="app-stat__value">{offers.filter(o => o.status === 'OPEN').length}</div><div className="app-stat__label">Open</div></div>
           <div className="app-stat app-stat--red"><div className="app-stat__value">{offers.filter(o => o.status === 'CLOSED').length}</div><div className="app-stat__label">Closed</div></div>
-          <div className="app-stat app-stat--orange"><div className="app-stat__value">{offers.reduce((s, o) => s + (o.applicants || 0), 0)}</div><div className="app-stat__label">Total Applicants</div></div>
+          <div className="app-stat app-stat--orange"><div className="app-stat__value">{offers.reduce((s, o) => s + (o.applicants || 0), 0)}</div><div className="app-stat__label">Applicants</div></div>
         </div>
 
-        {/* Filter */}
         <div className="applications-filters">
-          {['all','OPEN','CLOSED'].map(f => (
+          {['all', 'OPEN', 'CLOSED'].map(f => (
             <button key={f} className={`app-filter ${filterStatus === f ? 'app-filter--active' : ''}`} onClick={() => setFilter(f)}>
               {f === 'all' ? 'All' : f.charAt(0) + f.slice(1).toLowerCase()} ({f === 'all' ? offers.length : offers.filter(o => o.status === f).length})
             </button>
           ))}
         </div>
 
-        {/* Offers list */}
         <div className="applications-list">
           {loading ? <div className="loading-text">Loading offers...</div>
           : filteredOffers.length === 0 ? (
@@ -164,7 +183,9 @@ export default function CompanyOffers() {
             <div key={offer._id} className="application-card">
               <div className="application-card__header">
                 <div className="application-card__company">
-                  <div className="application-card__logo offer-card__logo--offer"><BriefcaseIcon /></div>
+                  <div className="application-card__logo" style={{ background: 'rgba(16,185,129,.15)', color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BriefcaseIcon />
+                  </div>
                   <div className="application-card__info">
                     <h3 className="application-card__title">{offer.title}</h3>
                     <p className="application-card__company-name">{offer.wilaya} · {offer.duration} months · {offer.applicants || 0} applicants</p>
@@ -203,7 +224,7 @@ export default function CompanyOffers() {
         <div className="modal-overlay">
           <div className="modal-box">
             <h3 className="modal-box__title">Delete Offer?</h3>
-            <p className="modal-box__text">This action cannot be undone. All applications will also be removed.</p>
+            <p className="modal-box__text">This action cannot be undone.</p>
             <div className="modal-box__actions">
               <Btn variant="outline" style={{ flex: 1 }} onClick={() => setDeleteConfirm(null)}>Cancel</Btn>
               <button className="btn--confirm-delete" onClick={() => handleDelete(deleteConfirm)}>Delete</button>
@@ -212,11 +233,12 @@ export default function CompanyOffers() {
         </div>
       )}
 
-      {/* ADD/EDIT MODAL */}
+      {/* ADD / EDIT MODAL */}
       {showModal && (
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowModal(false); }}>
           <div className="modal-box modal-box--large">
             <h3 className="modal-box__title">{editingId ? 'Edit Offer' : 'New Internship Offer'}</h3>
+
             <div className="modal-field">
               <FieldLabel>Offer Title *</FieldLabel>
               <input className="input" value={formData.title} onChange={e => upd('title', e.target.value)} placeholder="e.g. Full Stack Development Internship" />
@@ -225,11 +247,14 @@ export default function CompanyOffers() {
               <FieldLabel>Description</FieldLabel>
               <textarea className="input cv-textarea" rows={3} value={formData.description} onChange={e => upd('description', e.target.value)} placeholder="Describe the internship..." />
             </div>
+
             <div className="cv-form-grid modal-field">
+              {/* Wilaya dropdown — real catalog */}
               <div className="cv-form-field">
-                <FieldLabel>Wilaya</FieldLabel>
+                <FieldLabel>Wilaya *</FieldLabel>
                 <select className="input cv-select" value={formData.wilaya} onChange={e => upd('wilaya', e.target.value)}>
-                  {wilayas.map(w => <option key={w} className="c">{w}</option>)}
+                  <option value="">Select wilaya...</option>
+                  {catalogWilayas.map(w => <option key={w} value={w} className="c">{w}</option>)}
                 </select>
               </div>
               <div className="cv-form-field">
@@ -262,23 +287,36 @@ export default function CompanyOffers() {
                 </select>
               </div>
             </div>
+
+            {/* Skills — real catalog */}
             <div className="modal-skills-section">
               <FieldLabel>Required Skills</FieldLabel>
-              <div className="cv-skill-search"><SearchIcon /><input className="cv-skill-search__input" placeholder="Search skills..." value={skillSearch} onChange={e => setSkillSearch(e.target.value)} /></div>
+              <div className="cv-skill-search">
+                <SearchIcon />
+                <input className="cv-skill-search__input" placeholder="Search skills..."
+                  value={skillSearch} onChange={e => setSkillSearch(e.target.value)} />
+              </div>
               {formData.requiredSkills.length > 0 && (
                 <div className="modal-selected-skills">
                   {formData.requiredSkills.map(sk => (
-                    <span key={sk} className="skill-tag skill-tag--selected">{sk}<button className="skill-tag__remove" onClick={() => toggleSkill(sk)}>✕</button></span>
+                    <span key={sk} className="skill-tag skill-tag--selected">
+                      {sk}<button className="skill-tag__remove" onClick={() => toggleSkill(sk)}>✕</button>
+                    </span>
                   ))}
                 </div>
               )}
               <div className="cv-skills-grid">
-                {filteredSkills.map(sk => {
+                {filteredCatalogSkills.map(sk => {
                   const active = formData.requiredSkills.includes(sk);
-                  return <button key={sk} className={`cv-skill-btn ${active ? 'cv-skill-btn--active' : ''}`} onClick={() => toggleSkill(sk)}>{active && <CheckIcon />}{sk}</button>;
+                  return (
+                    <button key={sk} className={`cv-skill-btn ${active ? 'cv-skill-btn--active' : ''}`} onClick={() => toggleSkill(sk)}>
+                      {active && <CheckIcon />}{sk}
+                    </button>
+                  );
                 })}
               </div>
             </div>
+
             <div className="modal-box__actions">
               <Btn variant="outline" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancel</Btn>
               <Btn variant="primary" style={{ flex: 2 }} onClick={handleSave}>

@@ -1,4 +1,5 @@
 // src/pages/Studentcv.jsx
+// Student CV — skill picker uses real skills from the backend catalog.
 import { useState, useEffect } from 'react';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
@@ -6,15 +7,8 @@ import { FieldLabel } from '../components/Input';
 import { ArrowRight, SearchIcon, DocIcon, ChartIcon, GradCapIcon, BuildingIcon, CheckIcon } from '../components/Icons';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useCatalog } from '../hooks/useCatalog';
 import { useAuth } from '../context/AuthContext';
-
-const ALL_SKILLS = [
-  'React', 'Vue.js', 'Angular', 'Next.js',
-  'Node.js', 'Express', 'Django', 'FastAPI', 'Laravel', 'Spring Boot',
-  'Python', 'Java', 'JavaScript', 'TypeScript', 'PHP', 'C++',
-  'MongoDB', 'PostgreSQL', 'MySQL', 'Firebase',
-  'Docker', 'Git', 'Linux', 'AWS',
-];
 
 const navItems = [
   { id: 'dashboard',    label: 'Dashboard',      icon: <ChartIcon /> },
@@ -26,47 +20,44 @@ const navItems = [
 export default function StudentCV() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [saved, setSaved]           = useState(false);
-  const [saving, setSaving]         = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [skills, setSkills]         = useState([]);
+
+  // ── Real catalog ──
+  const { skills: catalogSkills, wilayas: catalogWilayas } = useCatalog();
+
+  const [saved, setSaved]     = useState(false);
+  const [saving, setSaving]   = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [skills, setSkills]   = useState([]);
   const [skillSearch, setSkillSearch] = useState('');
   const [form, setForm] = useState({
     firstName: '', lastName: '', phone: '', wilaya: '',
     level: 'L3', specialty: '', githubLink: '', portfolioLink: '', bio: '',
   });
 
-  // Load the student profile from the backend on mount
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get('/student/profile');
+    api.get('/student/profile')
+      .then(res => {
         const s = res.data.data;
         setForm({
-          firstName:    s.firstName    || '',
-          lastName:     s.lastName     || '',
-          phone:        s.phone        || '',
-          wilaya:       s.wilaya       || '',
-          level:        s.level        || 'L3',
-          specialty:    s.specialty    || '',
-          githubLink:   s.githubLink   || '',
+          firstName:     s.firstName     || '',
+          lastName:      s.lastName      || '',
+          phone:         s.phone         || '',
+          wilaya:        s.wilaya        || '',
+          level:         s.level         || 'L3',
+          specialty:     s.specialty     || '',
+          githubLink:    s.githubLink    || '',
           portfolioLink: s.portfolioLink || '',
-          bio:          s.bio          || '',
+          bio:           s.bio           || '',
         });
         setSkills(s.skills || []);
-      } catch (err) {
-        console.error('Failed to load profile:', err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
+      })
+      .catch(err => console.error(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
   const toggleSkill = (sk) =>
     setSkills(prev => prev.includes(sk) ? prev.filter(s => s !== sk) : [...prev, sk]);
 
-  // Save updated profile to the backend
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -74,21 +65,22 @@ export default function StudentCV() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to save. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+      alert(err.response?.data?.message || 'Failed to save.');
+    } finally { setSaving(false); }
   };
 
   const update = (key, val) => setForm(f => ({ ...f, [key]: val }));
-  const filteredSkills = ALL_SKILLS.filter(sk => sk.toLowerCase().includes(skillSearch.toLowerCase()));
+
+  const filteredSkills = catalogSkills.filter(sk =>
+    sk.toLowerCase().includes(skillSearch.toLowerCase())
+  );
+
   const displayName = `${form.firstName} ${form.lastName}`.trim() || user?.name || 'Student';
 
   if (loading) return <div className="loading-text">Loading profile...</div>;
 
   return (
     <div className="dashboard">
-      {/* ── SIDEBAR ── */}
       <aside className="sidebar">
         <div className="sidebar__logo"><Logo /></div>
         <nav className="sidebar__nav">
@@ -119,7 +111,6 @@ export default function StudentCV() {
         </div>
       </aside>
 
-      {/* ── MAIN ── */}
       <main className="dashboard-main">
         <div className="dashboard-header">
           <div>
@@ -136,7 +127,7 @@ export default function StudentCV() {
         </div>
 
         <div className="cv-grid">
-          {/* LEFT: Preview */}
+          {/* LEFT */}
           <div className="cv-sidebar-panel">
             <div className="cv-avatar-card">
               <div className="cv-avatar">
@@ -149,17 +140,19 @@ export default function StudentCV() {
             <div className="cv-skills-preview">
               <div className="cv-section-title">Selected Skills</div>
               <div className="cv-skills-preview__list">
-                {skills.length === 0 ? <span style={{ color: '#475569', fontSize: 13 }}>No skills selected yet</span>
+                {skills.length === 0
+                  ? <span style={{ color: '#475569', fontSize: 13 }}>No skills selected yet</span>
                   : skills.map(sk => (
                     <span key={sk} className="skill-tag skill-tag--selected">
                       {sk}<button className="skill-tag__remove" onClick={() => toggleSkill(sk)}>✕</button>
                     </span>
-                  ))}
+                  ))
+                }
               </div>
             </div>
           </div>
 
-          {/* RIGHT: Form */}
+          {/* RIGHT */}
           <div className="cv-form-panel">
             {/* Personal Info */}
             <div className="cv-section">
@@ -171,35 +164,39 @@ export default function StudentCV() {
                 </div>
                 <div className="cv-form-field">
                   <FieldLabel>Last Name</FieldLabel>
-                  <input className="input" value={form.lastName} onChange={e => update('lastName', e.target.value)} />
+                  <input className="input" value={form.lastName}  onChange={e => update('lastName',  e.target.value)} />
                 </div>
                 <div className="cv-form-field">
-                  <FieldLabel>Phone Number</FieldLabel>
+                  <FieldLabel>Phone</FieldLabel>
                   <input className="input" value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+213 XX XXX XXX" />
                 </div>
+                {/* Wilaya — real catalog dropdown */}
                 <div className="cv-form-field">
                   <FieldLabel>Wilaya</FieldLabel>
-                  <input className="input" value={form.wilaya} onChange={e => update('wilaya', e.target.value)} placeholder="Sétif" />
+                  <select className="input cv-select" value={form.wilaya} onChange={e => update('wilaya', e.target.value)}>
+                    <option value="">Select wilaya...</option>
+                    {catalogWilayas.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="cv-form-field" style={{ marginTop: 16 }}>
-                <FieldLabel>Bio / Short Description</FieldLabel>
+                <FieldLabel>Bio</FieldLabel>
                 <textarea className="input cv-textarea" value={form.bio} onChange={e => update('bio', e.target.value)} rows={3} placeholder="Tell companies about yourself..." />
               </div>
             </div>
 
-            {/* Academic Info */}
+            {/* Academic */}
             <div className="cv-section">
               <div className="cv-section-title"><DocIcon /> Academic Information</div>
               <div className="cv-form-grid">
                 <div className="cv-form-field">
-                  <FieldLabel>Academic Level</FieldLabel>
+                  <FieldLabel>Level</FieldLabel>
                   <select className="input cv-select" value={form.level} onChange={e => update('level', e.target.value)}>
                     {['L1','L2','L3','M1','M2'].map(l => <option key={l}>{l}</option>)}
                   </select>
                 </div>
                 <div className="cv-form-field">
-                  <FieldLabel>Specialty / Program</FieldLabel>
+                  <FieldLabel>Specialty</FieldLabel>
                   <input className="input" value={form.specialty} onChange={e => update('specialty', e.target.value)} placeholder="Computer Science – IT" />
                 </div>
               </div>
@@ -207,10 +204,10 @@ export default function StudentCV() {
 
             {/* Links */}
             <div className="cv-section">
-              <div className="cv-section-title"><BuildingIcon /> Links & Portfolio</div>
+              <div className="cv-section-title"><BuildingIcon /> Links</div>
               <div className="cv-form-grid">
                 <div className="cv-form-field">
-                  <FieldLabel>GitHub Profile</FieldLabel>
+                  <FieldLabel>GitHub</FieldLabel>
                   <div className="cv-link-input">
                     <span className="cv-link-input__prefix">github.com/</span>
                     <input className="input cv-link-input__field" placeholder="your-username"
@@ -219,19 +216,20 @@ export default function StudentCV() {
                   </div>
                 </div>
                 <div className="cv-form-field">
-                  <FieldLabel>Portfolio URL</FieldLabel>
+                  <FieldLabel>Portfolio</FieldLabel>
                   <input className="input" placeholder="https://yourportfolio.com" value={form.portfolioLink} onChange={e => update('portfolioLink', e.target.value)} />
                 </div>
               </div>
             </div>
 
-            {/* Skills */}
+            {/* Skills — real catalog */}
             <div className="cv-section">
               <div className="cv-section-title"><ChartIcon /> Technical Skills</div>
-              <p className="cv-section-sub">Select all technologies you are comfortable with</p>
+              <p className="cv-section-sub">Select technologies you are comfortable with</p>
               <div className="cv-skill-search">
                 <SearchIcon />
-                <input className="cv-skill-search__input" placeholder="Search skills..." value={skillSearch} onChange={e => setSkillSearch(e.target.value)} />
+                <input className="cv-skill-search__input" placeholder="Search skills..."
+                  value={skillSearch} onChange={e => setSkillSearch(e.target.value)} />
               </div>
               <div className="cv-skills-grid">
                 {filteredSkills.map(sk => {

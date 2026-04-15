@@ -1,30 +1,30 @@
 /**
  * File: controllers/adminController.js
- * Purpose: Handles operations related to the admin dashboard.
- * Includes validation of agreements, tracking stats, user management, and dynamic data (skills, wilayas).
+ * Purpose: Handles admin dashboard operations.
+ * Skills and wilayas are now stored in MongoDB (not in-memory).
  */
 
-const Application = require('../models/Application');
+const Application         = require('../models/Application');
 const InternshipAgreement = require('../models/InternshipAgreement');
-const Student = require('../models/Student');
-const Company = require('../models/Company');
-const InternshipOffer = require('../models/InternshipOffer');
-const User = require('../models/User');
-const sendNotification = require('../utils/sendNotification');
-const generatePDF = require('../utils/generatePDF');
+const Student             = require('../models/Student');
+const Company             = require('../models/Company');
+const InternshipOffer     = require('../models/InternshipOffer');
+const User                = require('../models/User');
+const Skill               = require('../models/Skill');
+const Wilaya              = require('../models/Wilaya');
+const sendNotification    = require('../utils/sendNotification');
+const generatePDF         = require('../utils/generatePDF');
 
-// In-memory data for skills and wilayas as requested (beginner friendly).
-let skillsCatalog = ['React', 'Node.js', 'Python', 'Java', 'Data Analysis'];
-let wilayasCatalog = [{ id: '16', name: 'Alger' }, { id: '31', name: 'Oran' }];
+/* ─────────────────────────────────────────────────────────────────────────────
+   PENDING / VALIDATE / REJECT
+───────────────────────────────────────────────────────────────────────────── */
 
-/**
- * Get all ACCEPTED applications awaiting validation.
- */
+/** Get all ACCEPTED applications awaiting admin validation. */
 const getPendingApplications = async (req, res) => {
   try {
     const applications = await Application.find({ status: 'ACCEPTED' })
       .populate('studentId')
-      .populate('offerId');
+      .populate({ path: 'offerId', populate: { path: 'companyId' } });
     return res.status(200).json({ success: true, data: applications });
   } catch (error) {
     console.error(`Get Pending Apps Error: ${error.message}`);
@@ -32,14 +32,12 @@ const getPendingApplications = async (req, res) => {
   }
 };
 
-/**
- * Validate an application, generate the PDF, and notify users.
- */
+/** Validate an application → generate PDF → notify student & company. */
 const validateApplication = async (req, res) => {
   try {
     const application = await Application.findById(req.params.appId)
       .populate({ path: 'studentId', populate: { path: 'userId' } })
-      .populate({ path: 'offerId', populate: { path: 'companyId', populate: { path: 'userId' } } });
+      .populate({ path: 'offerId',   populate: { path: 'companyId', populate: { path: 'userId' } } });
 
     if (!application || application.status !== 'ACCEPTED') {
       return res.status(400).json({ success: false, message: 'Application not found or not in ACCEPTED state.' });
@@ -48,54 +46,47 @@ const validateApplication = async (req, res) => {
     application.status = 'VALIDATED';
     await application.save();
 
-    // Prepare data for PDF
     const student = application.studentId;
-    const offer = application.offerId;
+    const offer   = application.offerId;
     const company = offer.companyId;
 
     const pdfData = {
-      appId: application._id.toString(),
-      firstName: student.firstName || 'First Name',
-      lastName: student.lastName || 'Last Name',
-      level: student.level || 'L3',
-      specialty: student.specialty || 'ISIL',
-      companyName: company.name || 'Company Name',
-      offerTitle: offer.title || 'Offer Title',
-      duration: offer.duration || 1,
-      startDate: new Date(offer.startDate).toLocaleDateString(),
-      endDate: new Date(offer.deadline).toLocaleDateString(), // dummy end date based on deadline or similar
-      supervisorName: 'Admin Staff', // In a real app this might come from the req body
-      universityName: student.university || 'University of Algiers'
+      appId:          application._id.toString(),
+      firstName:      student.firstName  || 'First Name',
+      lastName:       student.lastName   || 'Last Name',
+      level:          student.level      || 'L3',
+      specialty:      student.specialty  || 'ISIL',
+      companyName:    company.name       || 'Company Name',
+      offerTitle:     offer.title        || 'Offer Title',
+      duration:       offer.duration     || 1,
+      startDate:      new Date(offer.startDate).toLocaleDateString(),
+      endDate:        new Date(offer.deadline).toLocaleDateString(),
+      supervisorName: req.body.supervisorName || 'Admin Staff',
+      universityName: student.university || 'University of Sétif 1',
     };
 
-    // Create the PDF
     const pdfPath = await generatePDF(pdfData);
 
-    // Save Internship Agreement
     const agreement = new InternshipAgreement({
-      studentId: student._id,
-      companyId: company._id,
-      applicationId: application._id,
+      studentId:      student._id,
+      companyId:      company._id,
+      applicationId:  application._id,
       pdfPath,
       universityName: pdfData.universityName,
       supervisorName: pdfData.supervisorName,
-      startDate: offer.startDate,
-      endDate: offer.deadline
+      startDate:      offer.startDate,
+      endDate:        offer.deadline,
     });
-
     await agreement.save();
 
-    // Notifying the Student
     await sendNotification(
       student.userId._id,
-      `Your internship agreement for "${offer.title}" has been generated!`,
+      `Your internship agreement for "${offer.title}" has been validated and is ready to download!`,
       'AGREEMENT_GENERATED'
     );
-
-    // Notifying the Company
     await sendNotification(
       company.userId._id,
-      `An internship agreement for candidate ${student.firstName} has been generated.`,
+      `An internship agreement for ${student.firstName} ${student.lastName} has been generated.`,
       'AGREEMENT_GENERATED'
     );
 
@@ -106,12 +97,12 @@ const validateApplication = async (req, res) => {
   }
 };
 
-/**
- * Reject an application with a reason.
- */
+/** Reject an application with a reason. */
 const rejectApplication = async (req, res) => {
   try {
-    const application = await Application.findById(req.params.appId).populate('studentId').populate('offerId');
+    const application = await Application.findById(req.params.appId)
+      .populate({ path: 'studentId', populate: { path: 'userId' } })
+      .populate('offerId');
     if (!application) {
       return res.status(404).json({ success: false, message: 'Application not found.' });
     }
@@ -119,14 +110,11 @@ const rejectApplication = async (req, res) => {
     application.status = 'REFUSED';
     await application.save();
 
-    // Optionally extract a reason from req.body.reason
-    const reason = req.body.reason || 'No specific reason provided by administration.';
-
-    // Notify the student
+    const reason = req.body.reason || 'No specific reason provided.';
     await sendNotification(
-      application.studentId.userId,
-      `Your application for "${application.offerId.title}" was rejected by the administration. Reason: ${reason}`,
-      'NEW_APPLICATION'
+      application.studentId.userId._id,
+      `Your application for "${application.offerId.title}" was rejected. Reason: ${reason}`,
+      'CANDIDATE_ACCEPTED'
     );
 
     return res.status(200).json({ success: true, message: 'Application rejected.' });
@@ -136,144 +124,186 @@ const rejectApplication = async (req, res) => {
   }
 };
 
-/**
- * Get global statistics.
- */
+/* ─────────────────────────────────────────────────────────────────────────────
+   STATS
+───────────────────────────────────────────────────────────────────────────── */
+
+/** Get platform statistics. */
 const getStats = async (req, res) => {
   try {
-    const totalStudents = await Student.countDocuments();
-    const totalOffers = await InternshipOffer.countDocuments();
-    const totalApplications = await Application.countDocuments();
-    
-    // Placed students: Unique students with a VALIDATED application
-    const validatedApps = await Application.find({ status: 'VALIDATED' }).distinct('studentId');
-    const placedStudents = validatedApps.length;
-    const unplacedStudents = totalStudents - placedStudents;
+    const totalStudents      = await Student.countDocuments();
+    const totalOffers        = await InternshipOffer.countDocuments();
+    const totalApplications  = await Application.countDocuments();
+    const placedStudentIds   = await Application.find({ status: 'VALIDATED' }).distinct('studentId');
+    const placedStudents     = placedStudentIds.length;
+    const unplacedStudents   = totalStudents - placedStudents;
+    const placementRate      = totalStudents > 0 ? parseFloat(((placedStudents / totalStudents) * 100).toFixed(2)) : 0;
 
-    const placementRate = totalStudents > 0 ? (placedStudents / totalStudents) * 100 : 0;
-
-    const stats = {
-      totalStudents,
-      placedStudents,
-      unplacedStudents,
-      totalOffers,
-      totalApplications,
-      placementRate: parseFloat(placementRate.toFixed(2)) // Format to 2 decimal places
-    };
-
-    return res.status(200).json({ success: true, data: stats });
+    return res.status(200).json({
+      success: true,
+      data: { totalStudents, placedStudents, unplacedStudents, totalOffers, totalApplications, placementRate },
+    });
   } catch (error) {
     console.error(`Get Stats Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error retrieving stats.' });
   }
 };
 
-/**
- * List all students.
- */
-const getStudents = async (req, res) => {
+/* ─────────────────────────────────────────────────────────────────────────────
+   USER MANAGEMENT
+───────────────────────────────────────────────────────────────────────────── */
+
+const getStudents    = async (req, res) => {
   try {
     const students = await Student.find().populate('userId', '-passwordHash');
     return res.status(200).json({ success: true, data: students });
   } catch (error) {
-    console.error(`Get Students Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error retrieving students.' });
   }
 };
 
-/**
- * List all companies.
- */
-const getCompanies = async (req, res) => {
+const getCompanies   = async (req, res) => {
   try {
     const companies = await Company.find().populate('userId', '-passwordHash');
     return res.status(200).json({ success: true, data: companies });
   } catch (error) {
-    console.error(`Get Companies Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error retrieving companies.' });
   }
 };
 
-/**
- * Ban or unban a user.
- * (Simple implementation toggling a field or simply returning success since model structure for banning is dynamic)
- */
-const toggleBanUser = async (req, res) => {
+const toggleBanUser  = async (req, res) => {
   try {
-    // In our simplified User model, we'll just pretend to update it or return a message.
-    // If you add `isBanned` to the User schema later, you could do: user.isBanned = !user.isBanned; await user.save();
-    return res.status(200).json({ success: true, message: `User ${req.params.userId} ban status toggled successfully.` });
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+    // Toggle isBanned field (add to User schema if needed)
+    user.isBanned = !user.isBanned;
+    await user.save();
+    return res.status(200).json({ success: true, message: `User ${user.isBanned ? 'banned' : 'unbanned'}.`, isBanned: user.isBanned });
   } catch (error) {
-    console.error(`Ban User Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error banning user.' });
   }
 };
 
-/**
- * Get all catalog skills.
- */
-const getSkills = (req, res) => {
-  return res.status(200).json({ success: true, data: skillsCatalog });
-};
+/* ─────────────────────────────────────────────────────────────────────────────
+   VALIDATED AGREEMENTS
+───────────────────────────────────────────────────────────────────────────── */
 
-/**
- * Add a skill to the catalog.
- */
-const addSkill = (req, res) => {
-  const { name } = req.body;
-  if (name && !skillsCatalog.includes(name)) {
-    skillsCatalog.push(name);
-  }
-  return res.status(201).json({ success: true, data: skillsCatalog });
-};
-
-/**
- * Remove a skill.
- */
-const removeSkill = (req, res) => {
-  skillsCatalog = skillsCatalog.filter(s => s !== req.params.name);
-  return res.status(200).json({ success: true, data: skillsCatalog });
-};
-
-/**
- * Get all wilayas.
- */
-const getWilayas = (req, res) => {
-  return res.status(200).json({ success: true, data: wilayasCatalog });
-};
-
-/**
- * Add a wilaya.
- */
-const addWilaya = (req, res) => {
-  const { id, name } = req.body;
-  if (id && name) {
-    wilayasCatalog.push({ id, name });
-  }
-  return res.status(201).json({ success: true, data: wilayasCatalog });
-};
-
-/**
- * Remove a wilaya.
- */
-const removeWilaya = (req, res) => {
-  wilayasCatalog = wilayasCatalog.filter(w => w.id !== req.params.id);
-  return res.status(200).json({ success: true, data: wilayasCatalog });
-};
-
-/**
- * Get all VALIDATED applications / agreements.
- */
 const getValidatedApplications = async (req, res) => {
   try {
     const agreements = await InternshipAgreement.find()
-      .populate({ path: 'studentId' })
-      .populate({ path: 'companyId' })
-      .populate({ path: 'applicationId', populate: { path: 'offerId' } });
+      .populate('studentId')
+      .populate('companyId')
+      .populate({ path: 'applicationId', populate: { path: 'offerId' } })
+      .sort({ createdAt: -1 });
     return res.status(200).json({ success: true, data: agreements });
   } catch (error) {
-    console.error(`Get Validated Apps Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error retrieving agreements.' });
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   SKILLS CRUD  — now persisted in MongoDB
+───────────────────────────────────────────────────────────────────────────── */
+
+/** Get all skills from the database. */
+const getSkills = async (req, res) => {
+  try {
+    const skills = await Skill.find().sort({ category: 1, name: 1 });
+    return res.status(200).json({ success: true, data: skills });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server error retrieving skills.' });
+  }
+};
+
+/** Add a new skill. */
+const addSkill = async (req, res) => {
+  try {
+    const { name, category } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Skill name is required.' });
+    }
+
+    // Check for duplicate (case-insensitive)
+    const exists = await Skill.findOne({ name: { $regex: `^${name.trim()}$`, $options: 'i' } });
+    if (exists) {
+      return res.status(400).json({ success: false, message: 'This skill already exists.' });
+    }
+
+    const skill = await Skill.create({
+      name:     name.trim(),
+      category: category || 'Other',
+    });
+
+    // Return the full updated list
+    const all = await Skill.find().sort({ category: 1, name: 1 });
+    return res.status(201).json({ success: true, data: all });
+  } catch (error) {
+    console.error(`Add Skill Error: ${error.message}`);
+    return res.status(500).json({ success: false, message: 'Server error adding skill.' });
+  }
+};
+
+/** Delete a skill by its MongoDB _id. */
+const removeSkill = async (req, res) => {
+  try {
+    await Skill.findByIdAndDelete(req.params.id);
+    const all = await Skill.find().sort({ category: 1, name: 1 });
+    return res.status(200).json({ success: true, data: all });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server error removing skill.' });
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   WILAYAS CRUD  — now persisted in MongoDB
+───────────────────────────────────────────────────────────────────────────── */
+
+/** Get all wilayas from the database. */
+const getWilayas = async (req, res) => {
+  try {
+    const wilayas = await Wilaya.find().sort({ code: 1 });
+    return res.status(200).json({ success: true, data: wilayas });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server error retrieving wilayas.' });
+  }
+};
+
+/** Add a new wilaya. */
+const addWilaya = async (req, res) => {
+  try {
+    const { code, name } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Wilaya name is required.' });
+    }
+
+    const exists = await Wilaya.findOne({
+      $or: [
+        { name: { $regex: `^${name.trim()}$`, $options: 'i' } },
+        ...(code ? [{ code: code.trim() }] : []),
+      ],
+    });
+    if (exists) {
+      return res.status(400).json({ success: false, message: 'This wilaya already exists.' });
+    }
+
+    await Wilaya.create({ code: code?.trim() || '', name: name.trim() });
+
+    const all = await Wilaya.find().sort({ code: 1 });
+    return res.status(201).json({ success: true, data: all });
+  } catch (error) {
+    console.error(`Add Wilaya Error: ${error.message}`);
+    return res.status(500).json({ success: false, message: 'Server error adding wilaya.' });
+  }
+};
+
+/** Delete a wilaya by its MongoDB _id. */
+const removeWilaya = async (req, res) => {
+  try {
+    await Wilaya.findByIdAndDelete(req.params.id);
+    const all = await Wilaya.find().sort({ code: 1 });
+    return res.status(200).json({ success: true, data: all });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Server error removing wilaya.' });
   }
 };
 
@@ -285,11 +315,11 @@ module.exports = {
   getStudents,
   getCompanies,
   toggleBanUser,
+  getValidatedApplications,
   getSkills,
   addSkill,
   removeSkill,
   getWilayas,
   addWilaya,
   removeWilaya,
-  getValidatedApplications
 };
