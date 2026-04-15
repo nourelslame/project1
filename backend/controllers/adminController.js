@@ -33,6 +33,12 @@ const getPendingApplications = async (req, res) => {
 };
 
 /** Validate an application → generate PDF → notify student & company. */
+/**
+ * File: controllers/adminController.js  (partial — validateApplication only)
+ * Replace the validateApplication function with this version.
+ * It passes all required fields to generatePDF to match the official format.
+ */
+
 const validateApplication = async (req, res) => {
   try {
     const application = await Application.findById(req.params.appId)
@@ -40,7 +46,10 @@ const validateApplication = async (req, res) => {
       .populate({ path: 'offerId',   populate: { path: 'companyId', populate: { path: 'userId' } } });
 
     if (!application || application.status !== 'ACCEPTED') {
-      return res.status(400).json({ success: false, message: 'Application not found or not in ACCEPTED state.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Application not found or not in ACCEPTED state.',
+      });
     }
 
     application.status = 'VALIDATED';
@@ -50,19 +59,44 @@ const validateApplication = async (req, res) => {
     const offer   = application.offerId;
     const company = offer.companyId;
 
+    // ── Build PDF data — maps every field to the official Convention de Stage layout ──
     const pdfData = {
-      appId:          application._id.toString(),
-      firstName:      student.firstName  || 'First Name',
-      lastName:       student.lastName   || 'Last Name',
-      level:          student.level      || 'L3',
-      specialty:      student.specialty  || 'ISIL',
-      companyName:    company.name       || 'Company Name',
-      offerTitle:     offer.title        || 'Offer Title',
-      duration:       offer.duration     || 1,
-      startDate:      new Date(offer.startDate).toLocaleDateString(),
-      endDate:        new Date(offer.deadline).toLocaleDateString(),
-      supervisorName: req.body.supervisorName || 'Admin Staff',
-      universityName: student.university || 'University of Sétif 1',
+      appId: application._id.toString(),
+
+      // Student fields
+      firstName:       student.firstName   || '',
+      lastName:        student.lastName    || '',
+      faculty:         student.university  || 'Université Sétif 1',   // maps to Faculté
+      department:      student.department  || student.specialty || '',
+      studentId:       '',                                            // carte étudiant — not stored
+      socialSecurity:  '',                                            // not stored
+      phone:           student.phone       || '',
+      level:           student.level       || '',
+      specialty:       student.specialty   || '',
+
+      // University fields
+      university:        student.university  || 'Université Sétif 1 — Ferhat Abbas',
+      universityPhone:   '+213 36 62 45 79',
+      universityAddress: 'Cité Maâbouda, Sétif, Algérie',
+
+      // Company fields
+      companyName:            company.name     || '',
+      companyAddress:         company.wilaya   || '',
+      companyRepresentative:  req.body.companyRepresentative || company.name || '',
+      companyPhone:           company.phone    || '',
+      companyFax:             '',
+
+      // Internship fields
+      offerTitle:      offer.title        || '',
+      supervisorName:  req.body.supervisorName || 'Responsable Pédagogique',
+      duration:        offer.duration     || '',
+      startDate:       offer.startDate
+                         ? new Date(offer.startDate).toLocaleDateString('fr-FR')
+                         : '',
+      endDate:         offer.deadline
+                         ? new Date(offer.deadline).toLocaleDateString('fr-FR')
+                         : '',
+      city:            company.wilaya || 'Sétif',
     };
 
     const pdfPath = await generatePDF(pdfData);
@@ -72,28 +106,33 @@ const validateApplication = async (req, res) => {
       companyId:      company._id,
       applicationId:  application._id,
       pdfPath,
-      universityName: pdfData.universityName,
+      universityName: pdfData.university,
       supervisorName: pdfData.supervisorName,
       startDate:      offer.startDate,
       endDate:        offer.deadline,
     });
     await agreement.save();
 
+    // Notify student
     await sendNotification(
       student.userId._id,
-      `Your internship agreement for "${offer.title}" has been validated and is ready to download!`,
+      `Votre convention de stage pour "${offer.title}" a été validée et est prête à télécharger !`,
       'AGREEMENT_GENERATED'
     );
+    // Notify company
     await sendNotification(
       company.userId._id,
-      `An internship agreement for ${student.firstName} ${student.lastName} has been generated.`,
+      `La convention de stage de ${student.firstName} ${student.lastName} pour "${offer.title}" a été générée.`,
       'AGREEMENT_GENERATED'
     );
 
     return res.status(200).json({ success: true, data: { agreement, pdfPath } });
   } catch (error) {
     console.error(`Validate Application Error: ${error.message}`);
-    return res.status(500).json({ success: false, message: 'Server error validating application.' });
+    return res.status(500).json({
+      success: false,
+      message: 'Server error validating application.',
+    });
   }
 };
 
