@@ -1,7 +1,7 @@
 /**
  * File: models/User.js
- * Purpose: Defines the base User schema used for authentication and core identification.
- * Other specific user types (Student, Company, Admin) will reference this model.
+ * Purpose: Base User schema for authentication.
+ * Added: isBanned field so admin can block/unblock accounts.
  */
 
 const mongoose = require('mongoose');
@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema({
     enum: ['STUDENT', 'COMPANY', 'ADMIN'],
     required: true,
   },
-}, { timestamps: true }); // automatically adds createdAt and updatedAt
+  // Admin can set this to true to block the user from logging in
+  isBanned: {
+    type: Boolean,
+    default: false,
+  },
+}, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

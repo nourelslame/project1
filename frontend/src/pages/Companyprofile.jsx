@@ -1,5 +1,6 @@
 // src/pages/Companyprofile.jsx
-import { useState, useEffect } from 'react';
+// Company profile page with logo upload support.
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
@@ -7,37 +8,42 @@ import NotificationBell from '../components/NotificationBell';
 import { FieldLabel } from '../components/Input';
 import { ArrowRight, ChartIcon, BuildingIcon, CheckIcon, UsersIcon, BriefcaseIcon } from '../components/Icons';
 import api from '../api/axios';
+import { useCatalog } from '../hooks/useCatalog';
 import { useAuth } from '../context/AuthContext';
 
 const GlobeIcon  = () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>;
 const MailIcon   = () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>;
 const MapPinIcon = () => <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>;
+const CameraIcon = () => <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>;
 
 const navItems = [
-  { id: 'dashboard',  label: 'Dashboard',     icon: <ChartIcon /> },
-  { id: 'profile',    label: 'Company Info',  icon: <BuildingIcon /> },
-  { id: 'offers',     label: 'Manage Offers', icon: <BriefcaseIcon /> },
-  { id: 'candidates', label: 'Candidates',    icon: <UsersIcon /> },
+  { id: 'dashboard',  label: 'Dashboard',    icon: <ChartIcon /> },
+  { id: 'profile',    label: 'Company Info', icon: <BuildingIcon /> },
+  { id: 'offers',     label: 'Manage Offers',icon: <BriefcaseIcon /> },
+  { id: 'candidates', label: 'Candidates',   icon: <UsersIcon /> },
 ];
-
-const wilayas = ['Algiers','Sétif','Oran','Constantine','Annaba','Batna','Béjaïa','Blida','Tizi Ouzou','Jijel','Mostaganem','Médéa','Bouira','Chlef','Skikda'];
 
 export default function CompanyProfile() {
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { wilayas: catalogWilayas } = useCatalog();
+  const fileInputRef = useRef(null);
 
-  const [saved, setSaved]   = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [saved, setSaved]         = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [logoPreview, setLogoPreview] = useState(null);   // local blob URL for instant preview
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState('');
+
   const [form, setForm] = useState({
     name: '', description: '', wilaya: '', website: '', email: '', phone: '', linkedin: '',
   });
 
-  // Load company profile from backend on mount
+  // Load profile from backend
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const res = await api.get('/company/profile');
+    api.get('/company/profile')
+      .then(res => {
         const c = res.data.data;
         setForm({
           name:        c.name        || '',
@@ -48,13 +54,14 @@ export default function CompanyProfile() {
           phone:       c.phone       || '',
           linkedin:    c.linkedin    || '',
         });
-      } catch (err) { console.error(err.message); }
-      finally { setLoading(false); }
-    };
-    fetchProfile();
+        // If the company already has a logo, show it
+        if (c.logo) setLogoPreview(`http://localhost:5000${c.logo}`);
+      })
+      .catch(err => console.error(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Save updated company profile to backend
+  // Save text profile fields
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -66,12 +73,55 @@ export default function CompanyProfile() {
     } finally { setSaving(false); }
   };
 
+  // ── Logo upload ──────────────────────────────────────────────────────────
+  const handleLogoChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate type client-side
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.type)) {
+      setLogoError('Only JPG, PNG, WebP or GIF images are allowed.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoError('Image must be smaller than 5 MB.');
+      return;
+    }
+    setLogoError('');
+
+    // Show instant local preview
+    const localUrl = URL.createObjectURL(file);
+    setLogoPreview(localUrl);
+
+    // Upload to backend
+    setLogoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('logo', file);                 // field name must be "logo"
+      const res = await api.post('/company/logo', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      // Replace local blob with the real server URL
+      const serverUrl = `http://localhost:5000${res.data.data.logo}`;
+      setLogoPreview(serverUrl);
+      URL.revokeObjectURL(localUrl);
+    } catch (err) {
+      setLogoError(err.response?.data?.message || 'Logo upload failed.');
+      setLogoPreview(null);
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   const update = (key, val) => setForm(f => ({ ...f, [key]: val }));
+  const initials = (form.name || 'C').slice(0, 2).toUpperCase();
 
   if (loading) return <div className="loading-text">Loading profile...</div>;
 
   return (
     <div className="dashboard">
+      {/* SIDEBAR */}
       <aside className="sidebar">
         <div className="sidebar__logo"><Logo /></div>
         <nav className="sidebar__nav">
@@ -90,18 +140,21 @@ export default function CompanyProfile() {
         </nav>
         <div className="sidebar__user">
           <div className="sidebar__avatar" style={{ background: 'rgba(16,185,129,.2)', color: '#10b981' }}>
-            {(form.name || 'C').charAt(0).toUpperCase()}
+            {initials}
           </div>
           <div className="sidebar__user-info">
             <div className="sidebar__user-name">{form.name || 'Company'}</div>
             <div className="sidebar__user-role">Company · {form.wilaya}</div>
           </div>
           <button className="sidebar__logout" onClick={() => { logout(); navigate('/'); }} title="Logout">
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
           </button>
         </div>
       </aside>
 
+      {/* MAIN */}
       <main className="dashboard-main">
         <div className="dashboard-header">
           <div>
@@ -110,24 +163,67 @@ export default function CompanyProfile() {
           </div>
           <div className="dashboard-header__actions">
             <NotificationBell />
-            <Btn variant={saved ? 'destructive' : 'primary'} style={{ padding: '10px 24px', fontSize: '14px', minWidth: 140, transition: 'all .3s' }} onClick={handleSave}>
+            <Btn variant={saved ? 'destructive' : 'primary'}
+              style={{ padding: '10px 24px', fontSize: '14px', minWidth: 140, transition: 'all .3s' }}
+              onClick={handleSave}>
               {saving ? 'Saving...' : saved ? <><CheckIcon /> Saved!</> : <>Save Changes <ArrowRight /></>}
             </Btn>
           </div>
         </div>
 
         <div className="cv-grid">
-          {/* LEFT: Quick preview */}
+          {/* LEFT: logo preview + quick info */}
           <div className="cv-sidebar-panel">
             <div className="cv-avatar-card">
-              <div className="cv-avatar" style={{ background: 'rgba(16,185,129,.15)', borderRadius: 16, overflow: 'hidden' }}>
-                <span className="cv-avatar__initials" style={{ color: '#10b981', fontSize: 28, fontWeight: 800 }}>
-                  {(form.name || 'C').charAt(0).toUpperCase()}
-                </span>
+
+              {/* ── Logo upload area ── */}
+              <div className="company-logo-wrap">
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  style={{ display: 'none' }}
+                  onChange={handleLogoChange}
+                />
+
+                {/* Logo circle */}
+                <div
+                  className="company-logo-circle"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Click to upload logo"
+                >
+                  {logoUploading ? (
+                    <div className="company-logo-spinner">⏳</div>
+                  ) : logoPreview ? (
+                    <img src={logoPreview} alt="Company logo" className="company-logo-img" />
+                  ) : (
+                    <span className="cv-avatar__initials" style={{ color: '#10b981', fontSize: 28, fontWeight: 800 }}>
+                      {initials}
+                    </span>
+                  )}
+
+                  {/* Camera overlay on hover */}
+                  <div className="company-logo-overlay">
+                    <CameraIcon />
+                    <span>Change</span>
+                  </div>
+                </div>
+
+                {/* Upload hint */}
+                <p className="company-logo-hint">
+                  {logoUploading
+                    ? 'Uploading...'
+                    : 'Click to upload logo'}
+                </p>
+                {logoError && <p className="company-logo-error">{logoError}</p>}
               </div>
+
               <div className="cv-avatar__name">{form.name || 'Company Name'}</div>
               <div className="cv-avatar__role">{form.wilaya}</div>
             </div>
+
+            {/* Quick Info */}
             <div className="cv-skills-preview">
               <div className="cv-section-title">Quick Info</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
@@ -145,8 +241,9 @@ export default function CompanyProfile() {
             </div>
           </div>
 
-          {/* RIGHT: Form */}
+          {/* RIGHT: form */}
           <div className="cv-form-panel">
+            {/* Company Details */}
             <div className="cv-section">
               <div className="cv-section-title"><BuildingIcon /> Company Details</div>
               <div className="cv-form-grid">
@@ -158,44 +255,50 @@ export default function CompanyProfile() {
                   <FieldLabel>Wilaya (Location)</FieldLabel>
                   <select className="input cv-select" value={form.wilaya} onChange={e => update('wilaya', e.target.value)}>
                     <option value="">Select wilaya...</option>
-                    {wilayas.map(w => <option key={w}>{w}</option>)}
+                    {catalogWilayas.map(w => <option key={w} value={w}>{w}</option>)}
                   </select>
                 </div>
               </div>
               <div className="cv-form-field" style={{ marginTop: 16 }}>
                 <FieldLabel>Company Description</FieldLabel>
-                <textarea className="input cv-textarea" value={form.description} onChange={e => update('description', e.target.value)} rows={4} placeholder="Describe your company, mission, and culture..." />
+                <textarea className="input cv-textarea" value={form.description}
+                  onChange={e => update('description', e.target.value)} rows={4}
+                  placeholder="Describe your company, mission, and culture..." />
               </div>
             </div>
 
+            {/* Contact */}
             <div className="cv-section">
               <div className="cv-section-title"><MailIcon /> Contact Information</div>
               <div className="cv-form-grid">
                 <div className="cv-form-field">
                   <FieldLabel>Contact Email</FieldLabel>
-                  <input className="input" type="email" value={form.email} onChange={e => update('email', e.target.value)} placeholder="contact@company.dz" />
+                  <input className="input" type="email" value={form.email}
+                    onChange={e => update('email', e.target.value)} placeholder="contact@company.dz" />
                 </div>
                 <div className="cv-form-field">
                   <FieldLabel>Phone Number</FieldLabel>
-                  <input className="input" value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+213 XX XXX XXX" />
+                  <input className="input" value={form.phone}
+                    onChange={e => update('phone', e.target.value)} placeholder="+213 XX XXX XXX" />
                 </div>
               </div>
             </div>
 
+            {/* Online presence */}
             <div className="cv-section">
               <div className="cv-section-title"><GlobeIcon /> Online Presence</div>
               <div className="cv-form-grid">
                 <div className="cv-form-field">
                   <FieldLabel>Website URL</FieldLabel>
-                  <input className="input" value={form.website} onChange={e => update('website', e.target.value)} placeholder="https://yourcompany.dz" />
+                  <input className="input" value={form.website}
+                    onChange={e => update('website', e.target.value)} placeholder="https://yourcompany.dz" />
                 </div>
                 <div className="cv-form-field">
                   <FieldLabel>LinkedIn (optional)</FieldLabel>
                   <div className="cv-link-input">
                     <span className="cv-link-input__prefix">linkedin.com/in/</span>
                     <input className="input cv-link-input__field" placeholder="your-company"
-                      value={form.linkedin}
-                      onChange={e => update('linkedin', e.target.value)} />
+                      value={form.linkedin} onChange={e => update('linkedin', e.target.value)} />
                   </div>
                 </div>
               </div>

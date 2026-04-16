@@ -14,8 +14,8 @@ const User   = require('../models/User');
 const Admin  = require('../models/Admin');
 
 // ── Hardcoded admin credentials ──────────────────────────────────────────────
-const ADMIN_EMAIL    = 'admin@stagio.dz';
-const ADMIN_PASSWORD = 'Admin@12345678';
+const ADMIN_EMAIL    = 'admin@gmail.com';
+const ADMIN_PASSWORD = '12345678';
 const ADMIN_NAME     = 'Admin Stagio';
 const ADMIN_DEPT     = 'Internship Office';
 // ─────────────────────────────────────────────────────────────────────────────

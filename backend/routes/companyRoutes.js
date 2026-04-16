@@ -1,29 +1,34 @@
 /**
  * File: routes/companyRoutes.js
- * Purpose: Routing for company-specific operations.
+ * Added: POST /api/company/logo — upload company logo image
  */
 
 const express = require('express');
-const router = express.Router();
-const { 
-  getProfile, 
-  updateProfile, 
-  getMyOffers, 
-  getCandidates, 
-  acceptCandidate, 
-  refuseCandidate 
+const router  = express.Router();
+const {
+  getProfile,
+  updateProfile,
+  uploadLogo,
+  getMyOffers,
+  getCandidates,
+  acceptCandidate,
+  refuseCandidate,
 } = require('../controllers/companyController');
-const auth = require('../middleware/auth');
-const roles = require('../middleware/roles');
+const auth   = require('../middleware/auth');
+const roles  = require('../middleware/roles');
+const upload = require('../middleware/upload');
 
-// All routes below require authentication and COMPANY role
+// All routes require authentication and COMPANY role
 router.use(auth);
 router.use(roles('COMPANY'));
 
-// GET and PUT /api/company/profile
+// GET and PUT /api/company/profile  (text fields)
 router.route('/profile')
   .get(getProfile)
   .put(updateProfile);
+
+// POST /api/company/logo  (multipart/form-data — field name: "logo")
+router.post('/logo', upload.single('logo'), uploadLogo);
 
 // GET /api/company/offers
 router.get('/offers', getMyOffers);

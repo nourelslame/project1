@@ -192,33 +192,52 @@ const getStats = async (req, res) => {
    USER MANAGEMENT
 ───────────────────────────────────────────────────────────────────────────── */
 
-const getStudents    = async (req, res) => {
+const getStudents = async (req, res) => {
   try {
-    const students = await Student.find().populate('userId', '-passwordHash');
+    // populate userId so the frontend receives email + isBanned + createdAt
+    const students = await Student.find()
+      .populate('userId', '-passwordHash');   // includes isBanned, name, email, createdAt
     return res.status(200).json({ success: true, data: students });
   } catch (error) {
+    console.error(`Get Students Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error retrieving students.' });
   }
 };
 
-const getCompanies   = async (req, res) => {
+const getCompanies = async (req, res) => {
   try {
-    const companies = await Company.find().populate('userId', '-passwordHash');
+    const companies = await Company.find()
+      .populate('userId', '-passwordHash');   // includes isBanned
     return res.status(200).json({ success: true, data: companies });
   } catch (error) {
+    console.error(`Get Companies Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error retrieving companies.' });
   }
 };
 
-const toggleBanUser  = async (req, res) => {
+const toggleBanUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
-    // Toggle isBanned field (add to User schema if needed)
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+ 
+    // Prevent banning another admin
+    if (user.role === 'ADMIN') {
+      return res.status(403).json({ success: false, message: 'Cannot ban an admin account.' });
+    }
+ 
+    // Toggle the isBanned field
     user.isBanned = !user.isBanned;
     await user.save();
-    return res.status(200).json({ success: true, message: `User ${user.isBanned ? 'banned' : 'unbanned'}.`, isBanned: user.isBanned });
+ 
+    return res.status(200).json({
+      success:  true,
+      isBanned: user.isBanned,
+      message:  `User ${user.name} has been ${user.isBanned ? 'banned' : 'unbanned'} successfully.`,
+    });
   } catch (error) {
+    console.error(`Ban User Error: ${error.message}`);
     return res.status(500).json({ success: false, message: 'Server error banning user.' });
   }
 };

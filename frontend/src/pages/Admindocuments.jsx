@@ -229,7 +229,7 @@ export default function AdminDocuments() {
                   {/* Preview button — only if we have an applicationId */}
                   {appId && (
                     <Btn
-                      variant="ghost"
+                      variant=""
                       style={{ padding: '9px 18px', fontSize: '13px' }}
                       onClick={() => handlePreview(appId)}
                     >

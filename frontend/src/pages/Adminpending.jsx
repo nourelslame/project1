@@ -156,7 +156,7 @@ export default function AdminPending() {
                   {(offer.requiredSkills || []).map((sk, i) => <span key={i} className="internship-card__skill">{sk}</span>)}
                 </div>
                 <div className="application-card__actions">
-                  <Btn variant="ghost" style={{ padding: '9px 18px', fontSize: '13px' }} onClick={() => setViewItem(item)}>View Details</Btn>
+                  <Btn variant="" style={{ padding: '9px 18px', fontSize: '13px' }} onClick={() => setViewItem(item)}>View Details</Btn>
                   <button className="btn--admin-validate" onClick={() => setActionConfirm({ item, type: 'validate' })}>
                     <CheckIcon /> Validate
                   </button>
