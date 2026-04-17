@@ -25,7 +25,9 @@ const seedAdmin = async () => {
     // Check if admin account already exists
     const existing = await User.findOne({ email: ADMIN_EMAIL, role: 'ADMIN' });
     if (existing) {
-      console.log('ℹ️  Admin account already exists — skipping seed');
+       console.log('ℹ️  Admin account already exists — skipping seed');
+       console.log(`   Email    : ${ADMIN_EMAIL}`);
+       console.log(`   Password : ${ADMIN_PASSWORD}`);
       return;
     }
 

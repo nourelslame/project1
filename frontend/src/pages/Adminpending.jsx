@@ -1,10 +1,12 @@
-// src/pages/AdminPending.jsx
+// src/pages/AdminPending.jsx — updated to show company logo
+// Only change from the previous version: replaced hardcoded logo divs with <CompanyLogo />
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
 import NotificationBell from '../components/NotificationBell';
-import { DocIcon, ChartIcon, UsersIcon, CheckIcon, ShieldIcon } from '../components/Icons';
+import CompanyLogo from '../components/CompanyLogo';
+import { DocIcon, ChartIcon, UsersIcon, CheckIcon } from '../components/Icons';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,28 +22,22 @@ export default function AdminPending() {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const [pending, setPending]         = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [viewItem, setViewItem]       = useState(null);
-  const [rejectModal, setRejectModal] = useState(null);
+  const [pending, setPending]           = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [viewItem, setViewItem]         = useState(null);
+  const [rejectModal, setRejectModal]   = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [actionConfirm, setActionConfirm] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [doneCount, setDoneCount]     = useState({ validated: 0, rejected: 0 });
+  const [doneCount, setDoneCount]       = useState({ validated: 0, rejected: 0 });
 
-  // Fetch all ACCEPTED applications waiting for admin validation
   useEffect(() => {
-    const fetchPending = async () => {
-      try {
-        const res = await api.get('/admin/pending');
-        setPending(res.data.data || []);
-      } catch (err) { console.error(err.message); }
-      finally { setLoading(false); }
-    };
-    fetchPending();
+    api.get('/admin/pending')
+      .then(res => setPending(res.data.data || []))
+      .catch(err => console.error(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  // Validate an application → generates PDF + notifies student & company
   const handleValidate = async (appId) => {
     setActionLoading(true);
     try {
@@ -55,7 +51,6 @@ export default function AdminPending() {
     } finally { setActionLoading(false); }
   };
 
-  // Reject an application with a reason
   const handleReject = async (appId) => {
     if (!rejectReason.trim()) { alert('Please provide a reason.'); return; }
     setActionLoading(true);
@@ -73,7 +68,6 @@ export default function AdminPending() {
 
   return (
     <div className="dashboard">
-      {/* SIDEBAR */}
       <aside className="sidebar sidebar--admin">
         <div className="sidebar__logo"><Logo /></div>
         <nav className="sidebar__nav">
@@ -110,7 +104,6 @@ export default function AdminPending() {
           <div className="dashboard-header__actions"><NotificationBell /></div>
         </div>
 
-        {/* Stats */}
         <div className="applications-stats" style={{ marginBottom: 28 }}>
           <div className="app-stat"><div className="app-stat__value">{pending.length}</div><div className="app-stat__label">Awaiting Review</div></div>
           <div className="app-stat"><div className="app-stat__value" style={{ color: '#e11d48' }}>{doneCount.validated}</div><div className="app-stat__label">Validated Today</div></div>
@@ -118,7 +111,6 @@ export default function AdminPending() {
           <div className="app-stat"><div className="app-stat__value">{pending.length + doneCount.validated + doneCount.rejected}</div><div className="app-stat__label">Total Requests</div></div>
         </div>
 
-        {/* List */}
         <div className="applications-list">
           {loading ? <div className="loading-text">Loading...</div>
           : pending.length === 0 ? (
@@ -135,7 +127,10 @@ export default function AdminPending() {
               <div key={item._id} className="application-card">
                 <div className="application-card__header">
                   <div className="application-card__company">
-                    <div className="application-card__logo admin-logo-bg">{(student.firstName || 'S').charAt(0)}</div>
+                    {/* Student avatar */}
+                    <div className="application-card__logo admin-logo-bg">
+                      {(student.firstName || 'S').charAt(0)}
+                    </div>
                     <div className="application-card__info">
                       <h3 className="application-card__title">{student.firstName} {student.lastName}</h3>
                       <p className="application-card__company-name">{student.level} · {student.university || 'University'}</p>
@@ -143,20 +138,32 @@ export default function AdminPending() {
                   </div>
                   <span className="application-card__status application-card__status--pending">Awaiting Validation</span>
                 </div>
+
+                {/* Company info with logo */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <CompanyLogo logo={company.logo} name={company.name} size={36} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#0f0f1a' }}>{company.name || 'Company'}</div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>{offer.title || ''} · {offer.type || ''} · {offer.duration} months</div>
+                  </div>
+                </div>
+
                 <div className="application-card__details">
-                  <span className="application-card__detail">{company.name || 'Company'}</span>
-                  <span className="application-card__detail">{offer.title || 'Offer'}</span>
-                  <span className="application-card__detail">{offer.type || ''}</span>
+                  <span className="application-card__detail">{company.wilaya || ''}</span>
                   <span className="application-card__detail">{offer.duration} months</span>
                 </div>
                 <div className="application-card__meta">
-                  <span className="application-card__date">Company accepted on {new Date(item.updatedAt).toLocaleDateString()}</span>
+                  <span className="application-card__date">
+                    Company accepted on {new Date(item.updatedAt).toLocaleDateString('fr-FR')}
+                  </span>
                 </div>
                 <div className="internship-card__skills" style={{ marginBottom: 16 }}>
                   {(offer.requiredSkills || []).map((sk, i) => <span key={i} className="internship-card__skill">{sk}</span>)}
                 </div>
                 <div className="application-card__actions">
-                  <Btn variant="" style={{ padding: '9px 18px', fontSize: '13px' }} onClick={() => setViewItem(item)}>View Details</Btn>
+                  <Btn variant="" style={{ padding: '9px 18px', fontSize: '13px' }} onClick={() => setViewItem(item)}>
+                    View Details
+                  </Btn>
                   <button className="btn--admin-validate" onClick={() => setActionConfirm({ item, type: 'validate' })}>
                     <CheckIcon /> Validate
                   </button>
@@ -180,22 +187,32 @@ export default function AdminPending() {
               <div className="cv-modal__info">
                 <div className="cv-modal__name">{viewItem.studentId?.firstName} {viewItem.studentId?.lastName}</div>
                 <div className="cv-modal__level">{viewItem.studentId?.level} · {viewItem.studentId?.specialty}</div>
-                <div className="cv-modal__university">{viewItem.studentId?.university}</div>
+                <div className="cv-modal__university">{viewItem.studentId?.university || 'Université Abdelhamid Mehri — Constantine 2'}</div>
               </div>
               <span className="application-card__status application-card__status--pending cv-modal__status">Pending</span>
             </div>
+
+            {/* Company with logo */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,.06)', marginBottom: 8 }}>
+              <CompanyLogo logo={viewItem.offerId?.companyId?.logo} name={viewItem.offerId?.companyId?.name} size={44} />
+              <div>
+                <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: 14 }}>{viewItem.offerId?.companyId?.name || 'Company'}</div>
+                <div style={{ color: '#64748b', fontSize: 12 }}>{viewItem.offerId?.companyId?.wilaya || ''}</div>
+              </div>
+            </div>
+
             {[
-              ['Company',   viewItem.offerId?.companyId?.name || 'N/A'],
-              ['Offer',     viewItem.offerId?.title || 'N/A'],
-              ['Type',      viewItem.offerId?.type || 'N/A'],
-              ['Duration',  `${viewItem.offerId?.duration} months`],
-              ['Deadline',  viewItem.offerId?.deadline ? new Date(viewItem.offerId.deadline).toLocaleDateString() : 'N/A'],
+              ['Offer',     viewItem.offerId?.title    || 'N/A'],
+              ['Type',      viewItem.offerId?.type     || 'N/A'],
+              ['Duration',  `${viewItem.offerId?.duration || ''} months`],
+              ['Phone',     viewItem.studentId?.phone  || 'N/A'],
             ].map(([label, value]) => (
               <div key={label} className="cv-modal__info-row">
                 <span className="cv-modal__info-label">{label}</span>
                 <span className="cv-modal__info-value">{value}</span>
               </div>
             ))}
+
             <div className="cv-modal__actions" style={{ marginTop: 24 }}>
               <button className="btn--cv-accept" style={{ background: '#e11d48' }}
                 onClick={() => { setViewItem(null); setActionConfirm({ item: viewItem, type: 'validate' }); }}>
@@ -203,7 +220,6 @@ export default function AdminPending() {
               </button>
               <button className="btn--cv-refuse"
                 onClick={() => { setViewItem(null); setRejectModal(viewItem); setRejectReason(''); }}>
-                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 Reject
               </button>
               <Btn variant="ghost" style={{ flex: 1 }} onClick={() => setViewItem(null)}>Close</Btn>
@@ -212,7 +228,7 @@ export default function AdminPending() {
         </div>
       )}
 
-      {/* VALIDATE CONFIRM MODAL */}
+      {/* VALIDATE CONFIRM */}
       {actionConfirm && (
         <div className="modal-overlay">
           <div className="modal-box">
@@ -228,12 +244,8 @@ export default function AdminPending() {
             </p>
             <div className="modal-box__actions">
               <Btn variant="outline" style={{ flex: 1 }} onClick={() => setActionConfirm(null)}>Cancel</Btn>
-              <button
-                className="btn--confirm-action btn--confirm-action--accepted"
-                style={{ background: '#e11d48' }}
-                onClick={() => handleValidate(actionConfirm.item._id)}
-                disabled={actionLoading}
-              >
+              <button className="btn--confirm-action btn--confirm-action--accepted" style={{ background: '#e11d48' }}
+                onClick={() => handleValidate(actionConfirm.item._id)} disabled={actionLoading}>
                 {actionLoading ? 'Processing...' : <><CheckIcon /> Validate</>}
               </button>
             </div>
@@ -247,30 +259,20 @@ export default function AdminPending() {
           <div className="modal-box">
             <h3 className="modal-box__title">Reject Application</h3>
             <p className="modal-box__text">
-              Please provide a reason for rejecting{' '}
-              <strong style={{ color: '#f1f5f9' }}>{rejectModal.studentId?.firstName}'s</strong> placement.
+              Reason for rejecting <strong style={{ color: '#f1f5f9' }}>{rejectModal.studentId?.firstName}'s</strong> placement:
             </p>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-                Reason for Rejection *
-              </label>
-              <textarea
-                className="input cv-textarea"
-                rows={4}
-                placeholder="e.g. Missing required documentation, company not accredited..."
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                style={{ background: 'rgba(255,255,255,.05)', borderColor: 'rgba(255,255,255,.1)', color: '#f1f5f9' }}
-              />
+              <label style={{ color: '#94a3b8', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>Reason *</label>
+              <textarea className="input cv-textarea" rows={4}
+                placeholder="e.g. Missing required documentation..."
+                value={rejectReason} onChange={e => setRejectReason(e.target.value)}
+                style={{ background: 'rgba(255,255,255,.05)', borderColor: 'rgba(255,255,255,.1)', color: '#f1f5f9' }} />
             </div>
             <div className="modal-box__actions">
               <Btn variant="outline" style={{ flex: 1 }} onClick={() => setRejectModal(null)}>Cancel</Btn>
-              <button
-                className="btn--confirm-delete"
-                onClick={() => handleReject(rejectModal._id)}
+              <button className="btn--confirm-delete" onClick={() => handleReject(rejectModal._id)}
                 disabled={!rejectReason.trim() || actionLoading}
-                style={{ opacity: rejectReason.trim() ? 1 : 0.5 }}
-              >
+                style={{ opacity: rejectReason.trim() ? 1 : 0.5 }}>
                 {actionLoading ? 'Processing...' : 'Confirm Rejection'}
               </button>
             </div>

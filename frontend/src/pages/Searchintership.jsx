@@ -1,9 +1,10 @@
 // src/pages/Searchintership.jsx
-// Search Internships — filters use real skills/wilayas from the catalog API.
+// Search Internships — shows real company logo on each offer card.
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
+import CompanyLogo from '../components/CompanyLogo';
 import { SearchIcon, DocIcon, ChartIcon, GradCapIcon, BuildingIcon, ArrowRight } from '../components/Icons';
 import api from '../api/axios';
 import { useCatalog } from '../hooks/useCatalog';
@@ -14,34 +15,46 @@ function FilterChip({ label, active, onClick }) {
 }
 
 function InternshipCard({ internship, onApply, applied }) {
+  const company = internship.companyId || {};
   return (
     <div className="internship-card">
       <div className="internship-card__header">
-        <div className="internship-card__company-logo">
-          {(internship.companyId?.name || 'C').charAt(0)}
-        </div>
+        {/* ── Company logo — real image if available ── */}
+        <CompanyLogo logo={company.logo} name={company.name} size={52} />
+
         <div className="internship-card__header-info">
           <h3 className="internship-card__title">{internship.title}</h3>
-          <p className="internship-card__company"><BuildingIcon />{internship.companyId?.name || 'Company'}</p>
+          <p className="internship-card__company">
+            <BuildingIcon />{company.name || 'Company'}
+          </p>
         </div>
         <span className={`internship-card__type internship-card__type--${internship.type?.toLowerCase()}`}>
           {internship.type}
         </span>
       </div>
+
       <p className="internship-card__description">{internship.description}</p>
+
       <div className="internship-card__skills">
         {(internship.requiredSkills || []).map((skill, i) => (
           <span key={i} className="internship-card__skill">{skill}</span>
         ))}
       </div>
+
       <div className="internship-card__footer">
         <span className="internship-card__location">{internship.wilaya}</span>
         <span className="internship-card__duration">{internship.duration} months</span>
-        <span className="internship-card__deadline">Deadline: {new Date(internship.deadline).toLocaleDateString()}</span>
+        <span className="internship-card__deadline">
+          Deadline: {new Date(internship.deadline).toLocaleDateString()}
+        </span>
       </div>
+
       <div className="hhh">
-        <Btn variant={applied ? 'outline' : 'primary'} onClick={() => !applied && onApply(internship._id)}
-          style={{ opacity: applied ? 0.7 : 1 }}>
+        <Btn
+          variant={applied ? '' : 'primary'}
+          onClick={() => !applied && onApply(internship._id)}
+          style={{ opacity: applied ? 0.7 : 1 }}
+        >
           {applied ? 'Applied ✓' : 'Apply Now'}
         </Btn>
       </div>
@@ -52,8 +65,6 @@ function InternshipCard({ internship, onApply, applied }) {
 export default function SearchInternships() {
   const navigate = useNavigate();
   const { logout } = useAuth();
-
-  // ── Real catalog from backend ──
   const { skills: catalogSkills, wilayas: catalogWilayas, loading: catalogLoading } = useCatalog();
 
   const [internships, setInternships]       = useState([]);
@@ -66,13 +77,12 @@ export default function SearchInternships() {
 
   const types = ['All', 'TECHNICAL', 'RESEARCH', 'COMMERCIAL', 'OTHER'];
 
-  // ── Fetch offers using real filter values ──
   const fetchOffers = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedWilaya !== 'all') params.set('wilaya',  selectedWilaya);
-      if (selectedType   !== 'all') params.set('type',    selectedType);
+      if (selectedWilaya !== 'all') params.set('wilaya', selectedWilaya);
+      if (selectedType   !== 'all') params.set('type',   selectedType);
       if (searchQuery)              params.set('keyword', searchQuery);
       if (selectedSkills.length)    params.set('skills',  selectedSkills.join(','));
       const res = await api.get(`/student/offers?${params.toString()}`);
@@ -147,7 +157,6 @@ export default function SearchInternships() {
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="search-bar-section">
           <div className="search-bar">
             <SearchIcon />
@@ -157,9 +166,7 @@ export default function SearchInternships() {
           </div>
         </div>
 
-        {/* Filters — populated from real catalog */}
         <div className="search-filters">
-          {/* Location filter */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Location</h3>
             <div className="search-filter-chips">
@@ -169,8 +176,6 @@ export default function SearchInternships() {
               ))}
             </div>
           </div>
-
-          {/* Type filter */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Type</h3>
             <div className="search-filter-chips">
@@ -181,8 +186,6 @@ export default function SearchInternships() {
               ))}
             </div>
           </div>
-
-          {/* Skills filter — from real catalog */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Skills</h3>
             <div className="search-filter-chips">
@@ -212,7 +215,7 @@ export default function SearchInternships() {
             <div className="search-empty">
               <SearchIcon />
               <h3 className="search-empty__title">No internships found</h3>
-              <p className="search-empty__text">Try adjusting your filters or search query</p>
+              <p className="search-empty__text">Try adjusting your filters</p>
             </div>
           )}
         </div>
