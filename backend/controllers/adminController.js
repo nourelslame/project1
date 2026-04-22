@@ -39,11 +39,21 @@ const getPendingApplications = async (req, res) => {
  * It passes all required fields to generatePDF to match the official format.
  */
 
+/**
+ * File: controllers/adminController.js — validateApplication (replace this function only)
+ *
+ * Uses the real university + department stored in the student's profile.
+ * No more hardcoded "Université Sétif 1" — the PDF shows what the student typed in their CV.
+ */
+
 const validateApplication = async (req, res) => {
   try {
     const application = await Application.findById(req.params.appId)
       .populate({ path: 'studentId', populate: { path: 'userId' } })
-      .populate({ path: 'offerId',   populate: { path: 'companyId', populate: { path: 'userId' } } });
+      .populate({
+        path: 'offerId',
+        populate: { path: 'companyId', populate: { path: 'userId' } },
+      });
 
     if (!application || application.status !== 'ACCEPTED') {
       return res.status(400).json({
@@ -55,58 +65,68 @@ const validateApplication = async (req, res) => {
     application.status = 'VALIDATED';
     await application.save();
 
-    const student = application.studentId;
-    const offer   = application.offerId;
-    const company = offer.companyId;
+    const student = application.studentId;   // Student doc (has university, department, etc.)
+    const offer   = application.offerId;     // InternshipOffer doc
+    const company = offer.companyId;         // Company doc
 
-    // ── Build PDF data — maps every field to the official Convention de Stage layout ──
+    // ── Use the student's REAL university and department from their CV ──
+    // If the student hasn't filled them in, we show a clear placeholder instead of a wrong name
+    const studentUniversity = student.university || '(Université non renseignée)';
+    const studentDepartment = student.department || student.specialty || '(Département non renseigné)';
+
     const pdfData = {
       appId: application._id.toString(),
 
-      // Student fields
-      firstName:       student.firstName   || '',
-      lastName:        student.lastName    || '',
-      faculty:         student.university  || 'Université Sétif 1',   // maps to Faculté
-      department:      student.department  || student.specialty || '',
-      studentId:       '',                                            // carte étudiant — not stored
-      socialSecurity:  '',                                            // not stored
-      phone:           student.phone       || '',
-      level:           student.level       || '',
-      specialty:       student.specialty   || '',
+      // Student personal info
+      firstName:     student.firstName || '',
+      lastName:      student.lastName  || '',
+      phone:         student.phone     || '',
+      level:         student.level     || '',
+      specialty:     student.specialty || '',
 
-      // University fields
-      university:        student.university  || 'Université Sétif 1 — Ferhat Abbas',
-      universityPhone:   '+213 36 62 45 79',
-      universityAddress: 'Cité Maâbouda, Sétif, Algérie',
+      // ── Real university info from student's CV ──
+      university:  studentUniversity,   // shown in the top header + "Fait à" section
+      faculty:     studentUniversity,   // shown in the "Faculté" field
+      department:  studentDepartment,   // shown in the "Département" field
 
-      // Company fields
-      companyName:            company.name     || '',
-      companyAddress:         company.wilaya   || '',
-      companyRepresentative:  req.body.companyRepresentative || company.name || '',
-      companyPhone:           company.phone    || '',
-      companyFax:             '',
+      // Student card (not stored — leave blank)
+      studentCardId:  '',
+      socialSecurity: '',
 
-      // Internship fields
-      offerTitle:      offer.title        || '',
-      supervisorName:  req.body.supervisorName || 'Responsable Pédagogique',
-      duration:        offer.duration     || '',
-      startDate:       offer.startDate
-                         ? new Date(offer.startDate).toLocaleDateString('fr-FR')
-                         : '',
-      endDate:         offer.deadline
-                         ? new Date(offer.deadline).toLocaleDateString('fr-FR')
-                         : '',
-      city:            company.wilaya || 'Sétif',
+      // Company info
+      companyName:           company.name    || '',
+      companyAddress:        `${company.wilaya || ''} — Algérie`.replace(/^—\s*/, ''),
+      companyRepresentative: req.body.companyRepresentative || company.name || '',
+      companyPhone:          company.phone   || '',
+      companyFax:            company.fax     || '',
+
+      // Internship info
+      offerTitle:     offer.title    || '',
+      supervisorName: req.body.supervisorName || '(Responsable pédagogique non renseigné)',
+      duration:       offer.duration || '',
+
+      // Dates in French format
+      startDate: offer.startDate
+        ? new Date(offer.startDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '',
+      endDate: offer.deadline
+        ? new Date(offer.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+        : '',
+
+      // City for "Fait à ..."
+      city: company.wilaya || 'Constantine',
     };
 
+    // Generate the PDF
     const pdfPath = await generatePDF(pdfData);
 
+    // Save the agreement record
     const agreement = new InternshipAgreement({
-      studentId:      student._id,
-      companyId:      company._id,
-      applicationId:  application._id,
+      studentId:     student._id,
+      companyId:     company._id,
+      applicationId: application._id,
       pdfPath,
-      universityName: pdfData.university,
+      universityName: studentUniversity,   // ← stored from student's profile
       supervisorName: pdfData.supervisorName,
       startDate:      offer.startDate,
       endDate:        offer.deadline,
@@ -116,9 +136,10 @@ const validateApplication = async (req, res) => {
     // Notify student
     await sendNotification(
       student.userId._id,
-      `Votre convention de stage pour "${offer.title}" a été validée et est prête à télécharger !`,
+      `Votre convention de stage pour "${offer.title}" a été validée ! Vous pouvez la télécharger depuis votre espace.`,
       'AGREEMENT_GENERATED'
     );
+
     // Notify company
     await sendNotification(
       company.userId._id,
@@ -135,7 +156,6 @@ const validateApplication = async (req, res) => {
     });
   }
 };
-
 /** Reject an application with a reason. */
 const rejectApplication = async (req, res) => {
   try {

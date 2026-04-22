@@ -3975,3 +3975,23 @@ body {
   text-align: center;
   margin-top: 2px;
 }
+/* ── PDF notice box in student CV sidebar — append to App.css ── */
+
+.cv-pdf-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(124,58,237,.07);
+  border: 1px solid rgba(124,58,237,.2);
+  border-radius: 10px;
+  color: #7c3aed;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+.cv-pdf-notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
