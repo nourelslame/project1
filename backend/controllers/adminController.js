@@ -134,16 +134,16 @@ const validateApplication = async (req, res) => {
     await agreement.save();
 
     // Notify student
-    await sendNotification(
-      student.userId._id,
-      `Votre convention de stage pour "${offer.title}" a été validée ! Vous pouvez la télécharger depuis votre espace.`,
-      'AGREEMENT_GENERATED'
-    );
+ await sendNotification(
+  student.userId._id,
+  `Your internship agreement for "${offer.title}" has been approved! You can download it from your dashboard.`,
+  'AGREEMENT_GENERATED'
+);
 
     // Notify company
     await sendNotification(
       company.userId._id,
-      `La convention de stage de ${student.firstName} ${student.lastName} pour "${offer.title}" a été générée.`,
+      `The internship agreement for${student.firstName} ${student.lastName} pour "${offer.title}" has been generated.`,
       'AGREEMENT_GENERATED'
     );
 
