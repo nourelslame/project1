@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationsContext';
+import { useAuth } from '../context/AuthContext';
 
 const TYPE_CONFIG = {
   NEW_APPLICATION:     { icon: '📩', color: '#3b82f6', bg: 'rgba(59,130,246,.12)' },
@@ -23,6 +24,7 @@ function timeAgo(dateStr) {
 
 export default function NotificationBell() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, right: 0 });
@@ -55,10 +57,16 @@ export default function NotificationBell() {
   const handleItemClick = (notif) => {
     markRead(notif._id);
     setOpen(false);
+    const role = user?.role;
     if (notif.type === 'NEW_APPLICATION')     navigate('/company/candidates/all');
     if (notif.type === 'CANDIDATE_ACCEPTED')  navigate('/applications');
     if (notif.type === 'VALIDATION_REQUIRED') navigate('/admin/pending');
-    if (notif.type === 'AGREEMENT_GENERATED') navigate('/applications');
+    // AGREEMENT_GENERATED: route depends on the role viewing it
+    if (notif.type === 'AGREEMENT_GENERATED') {
+      if (role === 'COMPANY')  navigate('/company/candidates');
+      else if (role === 'ADMIN') navigate('/admin/pending');
+      else navigate('/applications'); // STUDENT
+    }
   };
 
   return (

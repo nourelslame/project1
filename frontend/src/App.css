@@ -3371,7 +3371,7 @@ body {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 360px;
+  width: min(520px, 92vw);
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 18px;
@@ -3416,7 +3416,7 @@ body {
 
 /* ── Scrollable list ── */
 .notif-dropdown__list {
-  max-height: 380px;
+  max-height: 480px;
   overflow-y: auto;
 }
 .notif-dropdown__list::-webkit-scrollbar { width: 3px; }
@@ -3480,13 +3480,10 @@ body {
 }
 
 .notif-item__message {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.6;
+  word-break: break-word;
 }
 
 .notif-item__time {
@@ -3563,7 +3560,7 @@ body {
 }
 
 .notif-dropdown {
-  width: min(480px, 90vw);
+  width: min(520px, 92vw);
   background: #fff; border: 1px solid #e2e8f0;
   border-radius: 18px; box-shadow: 0 16px 48px rgba(0,0,0,.14);
   z-index: 9999; overflow: hidden;
@@ -3585,7 +3582,7 @@ body {
   color: #7c3aed; cursor: pointer; font-family: inherit;
 }
 
-.notif-dropdown__list { max-height: 360px; overflow-y: auto; }
+.notif-dropdown__list { max-height: 480px; overflow-y: auto; }
 
 .notif-item {
   display: flex; align-items: flex-start; gap: 10px;
@@ -3604,6 +3601,7 @@ body {
 .notif-item__body { flex: 1; min-width: 0; }
 .notif-item__message {
   font-size: 13px; color: #334155; line-height: 1.6;
+  word-break: break-word;
 }
 .notif-item__time { font-size: 11px; color: #94a3b8; margin-top: 4px; }
 .notif-item__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
@@ -3657,16 +3655,10 @@ body {
 }
 .notif-dropdown {
   position: absolute; top: calc(100% + 10px); right: 0;
-  width: 340px; background: #fff; border: 1px solid #e2e8f0;
+  width: min(520px, 92vw); background: #fff; border: 1px solid #e2e8f0;
   border-radius: 18px; box-shadow: 0 16px 48px rgba(0,0,0,.14);
-  z-index: 9999; 
-  animation: fadeUp 0.22s ease both;
-
-  position: absolute;  /* ← تأكد أنها موجودة */
-  top: calc(100% + 10px);
-  right: 0;
   z-index: 9999;
-
+  animation: fadeUp 0.22s ease both;
 }
 .notif-dropdown__header {
   display: flex; align-items: center; justify-content: space-between;
@@ -3677,7 +3669,7 @@ body {
   background: none; border: none; font-size: 12px; font-weight: 600;
   color: #7c3aed; cursor: pointer; font-family: inherit;
 }
-.notif-dropdown__list { max-height: 360px; overflow-y: auto; }
+.notif-dropdown__list { max-height: 480px; overflow-y: auto; }
 .notif-item {
   display: flex; align-items: flex-start; gap: 10px;
   padding: 12px 18px; border-bottom: 1px solid #f8f7fc;
@@ -3693,9 +3685,8 @@ body {
 }
 .notif-item__body { flex: 1; min-width: 0; }
 .notif-item__message {
-  font-size: 12px; color: #334155; line-height: 1.5;
-  display: -webkit-box; -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 13px; color: #334155; line-height: 1.6;
+  word-break: break-word;
 }
 .notif-item__time { font-size: 11px; color: #94a3b8; margin-top: 4px; }
 .notif-item__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
