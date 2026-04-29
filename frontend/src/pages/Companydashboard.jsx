@@ -187,7 +187,7 @@ export default function CompanyDashboard() {
                     </div>
                     <Btn style={{ padding: '7px 14px', fontSize: '12px', flexShrink: 0 }}
                       onClick={() => navigate(`/company/candidates/${offer._id}`)}>
-                      View
+                      View candidates
                     </Btn>
                   </div>
                   <div className="dash-rec-item__meta">

@@ -94,10 +94,10 @@ const generatePDF = (data) => {
       doc
         .font('Helvetica')
         .fontSize(8)
-        .text('الجمهورية الجزائرية الديمقراطية الشعبية', L + 75, HEADER_Y + 2, { width: W - 75, align: 'center' })
+        //.text('الجمهورية الجزائرية الديمقراطية الشعبية', L + 75, HEADER_Y + 2, { width: W - 75, align: 'center' })
         .text("République Algérienne Démocratique et Populaire", L + 75, doc.y + 1, { width: W - 75, align: 'center' })
         .moveDown(0.2)
-        .text("وزارة التعليم العالي والبحث العلمي", L + 75, doc.y, { width: W - 75, align: 'center' })
+        //.text("وزارة التعليم العالي والبحث العلمي", L + 75, doc.y, { width: W - 75, align: 'center' })
         .text("Ministère de l'Enseignement Supérieur et de la Recherche Scientifique", L + 75, doc.y + 1, { width: W - 75, align: 'center' })
         .moveDown(0.3);
 
@@ -105,7 +105,7 @@ const generatePDF = (data) => {
       doc
         .font('Helvetica-Bold')
         .fontSize(9)
-        .text('جامعة عبد الحميد مهري — قسنطينة 2', L + 75, doc.y, { width: W - 75, align: 'center' })
+       // .text('جامعة عبد الحميد مهري — قسنطينة 2', L + 75, doc.y, { width: W - 75, align: 'center' })
         .text("Université Abdelhamid Mehri — Constantine 2", L + 75, doc.y + 2, { width: W - 75, align: 'center' });
 
       // ── Horizontal line under header ──
@@ -233,8 +233,8 @@ const generatePDF = (data) => {
       field('Département', data.department || data.specialty || '', FY + LS * 2);
 
       // Row 3: Carte étudiant | N° Sécurité Sociale (two columns)
-      field('Carte d\'étudiant n°', data.studentCardId || '', FY + LS * 3);
-      field('N° Sécurité Sociale', data.socialSecurity || '', FY + LS * 3, W / 2);
+    //  field('Carte d\'étudiant n°', data.studentCardId || '', FY + LS * 3);
+      //field('N° Sécurité Sociale', data.socialSecurity || '', FY + LS * 3, W / 2);
 
       // Row 4: Tél
       field('Tél', data.phone || '', FY + LS * 4);
