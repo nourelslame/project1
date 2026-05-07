@@ -5236,3 +5236,67 @@ body {
   font-size: 14px;
   color: #0f0f1a;
 }
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   WILAYA SELECTOR — collapsible location filter
+   أضف هذا الكود في نهاية App.css
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+
+@keyframes chipsExpand {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Container */
+.wilaya-selector {
+  width: 100%;
+}
+
+/* Chips row — wraps naturally */
+.wilaya-selector__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* The extra chips animate in when expanded */
+.wilaya-selector__chips--expanded .filter-chip:nth-child(n+8) {
+  animation: chipsExpand 0.22s ease both;
+}
+
+/* ── Toggle button ── */
+.wilaya-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1.5px dashed rgba(124, 58, 237, 0.4);
+  color: #a78bfa;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.wilaya-toggle-btn:hover {
+  background: rgba(124, 58, 237, 0.16);
+  border-color: rgba(124, 58, 237, 0.7);
+  color: #c4b5fd;
+  transform: translateY(-1px);
+}
+
+/* When open — subtle active state */
+.wilaya-toggle-btn--open {
+  background: rgba(124, 58, 237, 0.14);
+  border-color: rgba(124, 58, 237, 0.6);
+  border-style: solid;
+}
+
+.wilaya-toggle-btn svg {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}

@@ -1,6 +1,6 @@
 // src/pages/Searchintership.jsx
 // Search Internships — shows real company logo on each offer card.
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
@@ -14,14 +14,58 @@ function FilterChip({ label, active, onClick }) {
   return <button className={`filter-chip ${active ? 'filter-chip--active' : ''}`} onClick={onClick}>{label}</button>;
 }
 
+// ── Collapsible wilaya selector ──────────────────────────────────────────────
+function WilayaSelector({ wilayas, selectedWilaya, onSelect }) {
+  const [expanded, setExpanded] = useState(false);
+  const VISIBLE_COUNT = 6; // chips shown when collapsed
+
+  const visibleWilayas = expanded ? wilayas : wilayas.slice(0, VISIBLE_COUNT);
+  const hiddenCount    = wilayas.length - VISIBLE_COUNT;
+
+  return (
+    <div className="wilaya-selector">
+      <div className={`wilaya-selector__chips ${expanded ? 'wilaya-selector__chips--expanded' : ''}`}>
+        {/* "All" chip always visible */}
+        <FilterChip label="All" active={selectedWilaya === 'all'} onClick={() => onSelect('all')} />
+
+        {visibleWilayas.map(w => (
+          <FilterChip key={w} label={w} active={selectedWilaya === w} onClick={() => onSelect(w)} />
+        ))}
+
+        {/* Toggle button — shown inline with the chips */}
+        {wilayas.length > VISIBLE_COUNT && (
+          <button
+            className={`wilaya-toggle-btn ${expanded ? 'wilaya-toggle-btn--open' : ''}`}
+            onClick={() => setExpanded(v => !v)}
+          >
+            {expanded ? (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M18 15l-6-6-6 6"/>
+                </svg>
+                Show less
+              </>
+            ) : (
+              <>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+                +{hiddenCount} wilayas
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function InternshipCard({ internship, onApply, applied }) {
   const company = internship.companyId || {};
   return (
     <div className="internship-card">
       <div className="internship-card__header">
-        {/* ── Company logo — real image if available ── */}
         <CompanyLogo logo={company.logo} name={company.name} size={52} />
-
         <div className="internship-card__header-info">
           <h3 className="internship-card__title">{internship.title}</h3>
           <p className="internship-card__company">
@@ -167,15 +211,16 @@ export default function SearchInternships() {
         </div>
 
         <div className="search-filters">
+          {/* ── Location filter — now uses WilayaSelector ── */}
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Location</h3>
-            <div className="search-filter-chips">
-              <FilterChip label="All" active={selectedWilaya === 'all'} onClick={() => setSelectedWilaya('all')} />
-              {catalogWilayas.map(w => (
-                <FilterChip key={w} label={w} active={selectedWilaya === w} onClick={() => setSelectedWilaya(w)} />
-              ))}
-            </div>
+            <WilayaSelector
+              wilayas={catalogWilayas}
+              selectedWilaya={selectedWilaya}
+              onSelect={setSelectedWilaya}
+            />
           </div>
+
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Type</h3>
             <div className="search-filter-chips">
@@ -186,6 +231,7 @@ export default function SearchInternships() {
               ))}
             </div>
           </div>
+
           <div className="search-filter-group">
             <h3 className="search-filter-group__title">Skills</h3>
             <div className="search-filter-chips">
