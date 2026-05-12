@@ -1,6 +1,4 @@
 // src/pages/RegisterPage.jsx
-// Registration page — only STUDENT and COMPANY roles are available.
-// ADMIN account is hardcoded in the backend and cannot be registered here.
 import { useState } from 'react';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
@@ -14,7 +12,6 @@ export default function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  // Only STUDENT and COMPANY — no ADMIN
   const roles = [
     {
       id: 'student',
@@ -44,10 +41,21 @@ export default function RegisterPage() {
 
   const active = roles.find(r => r.id === role);
 
-  // Send registration request to backend (ADMIN role blocked server-side too)
+  // Matches: anything@univ-anything.dz
+  const STUDENT_EMAIL_REGEX  = /^[^@]+@univ-.+\.dz$/i;
+  const isStudentDomainValid = role !== 'student' || STUDENT_EMAIL_REGEX.test(email.trim());
+  const showDomainError      = role === 'student' && email.length > 0 && !isStudentDomainValid;
+
   const handleRegister = async () => {
     setError('');
     if (!name || !email || !password || !confirm) { setError('All fields are required.'); return; }
+
+    // ✅ Uses regex — blocks anything that isn't @univ-*.dz
+    if (role === 'student' && !STUDENT_EMAIL_REGEX.test(email.trim())) {
+      setError('Student accounts must use a university email like you@univ-msila.dz');
+      return;
+    }
+
     if (password !== confirm) { setError('Passwords do not match.'); return; }
     if (password.length < 8)  { setError('Password must be at least 8 characters.'); return; }
 
@@ -57,11 +65,11 @@ export default function RegisterPage() {
         name,
         email,
         password,
-        role: role.toUpperCase(),   // 'STUDENT' | 'COMPANY'
+        role: role.toUpperCase(),
       });
       login(res.data.data.user, res.data.data.token);
       const r = res.data.data.user.role;
-      if (r === 'STUDENT')  navigate('/student/dashboard');
+      if (r === 'STUDENT')      navigate('/student/dashboard');
       else if (r === 'COMPANY') navigate('/company/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Please try again.');
@@ -93,7 +101,6 @@ export default function RegisterPage() {
           Select your role to get a tailored experience.
         </p>
 
-        {/* Role selector — only Student + Company */}
         <div className="role-selector">
           {roles.map((r, i) => {
             const isActive = role === r.id;
@@ -101,13 +108,13 @@ export default function RegisterPage() {
               <div
                 key={r.id}
                 className={`role-option ${isActive ? 'role-option--active' : ''}`}
-                onClick={() => setRole(r.id)}
+                onClick={() => { setRole(r.id); setError(''); setEmail(''); }}
                 style={{
-                  borderColor:  isActive ? r.color : undefined,
-                  background:   isActive ? r.bg    : undefined,
-                  boxShadow:    isActive ? `0 4px 20px ${r.color}22` : undefined,
+                  borderColor:    isActive ? r.color : undefined,
+                  background:     isActive ? r.bg    : undefined,
+                  boxShadow:      isActive ? `0 4px 20px ${r.color}22` : undefined,
                   animationDelay: `${0.25 + i * 0.08}s`,
-                  animation:    `fadeUp 0.5s ease ${0.25 + i * 0.08}s both`,
+                  animation:      `fadeUp 0.5s ease ${0.25 + i * 0.08}s both`,
                 }}
               >
                 <div className="role-option__icon" style={{ background: r.bg, color: r.color }}>
@@ -137,7 +144,6 @@ export default function RegisterPage() {
           </div>
           <p className="auth-right__sub auth-right__sub--small">Start your journey today</p>
 
-          {/* Progress bar */}
           <div className="progress-bar">
             <div className="progress-bar__step"><div className="progress-bar__fill" /></div>
             <div className="progress-bar__step" />
@@ -154,15 +160,28 @@ export default function RegisterPage() {
             />
           </div>
 
+          {/* ── Email with live domain validation ── */}
           <div className="auth-right__field">
             <FieldLabel>Email</FieldLabel>
-            <input
-              className="input"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
+            <div className={`email-input-wrapper ${showDomainError ? 'email-input-wrapper--error' : ''}`}>
+              <input
+                className="input"
+                type="email"
+                placeholder={role === 'student' ? 'you@univ-msila.dz' : 'you@company.com'}
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+              {role === 'student' && isStudentDomainValid && email.length > 0 && (
+                <span className="email-domain-tick">✓</span>
+              )}
+            </div>
+            {role === 'student' && (
+              <p className={`email-domain-hint ${showDomainError ? 'email-domain-hint--error' : ''}`}>
+                {showDomainError
+                  ? 'No it Must be like you@univ-msila.dz'
+                  : ' Use your university email — e.g. you@univ-msila.dz'}
+              </p>
+            )}
           </div>
 
           <div className="auth-right__field">
@@ -192,10 +211,7 @@ export default function RegisterPage() {
             style={{ padding: '14px', fontSize: '15px' }}
             onClick={handleRegister}
           >
-            {loading
-              ? 'Creating account...'
-              : <> Create Account <ArrowRight /> </>
-            }
+            {loading ? 'Creating account...' : <> Create Account <ArrowRight /> </>}
           </Btn>
 
           <div className="divider">
