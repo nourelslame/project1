@@ -177,9 +177,12 @@ export default function RegisterPage() {
             </div>
             {role === 'student' && (
               <p className={`email-domain-hint ${showDomainError ? 'email-domain-hint--error' : ''}`}>
+                <span className="email-domain-hint__icon">
+                  {showDomainError ? '⚠' : 'ℹ'}
+                </span>
                 {showDomainError
-                  ? 'No it Must be like you@univ-msila.dz'
-                  : ' Use your university email — e.g. you@univ-msila.dz'}
+                  ? 'Must be a university email — e.g. you@univ-msila.dz'
+                  : 'Use your university email — e.g. you@univ-msila.dz'}
               </p>
             )}
           </div>

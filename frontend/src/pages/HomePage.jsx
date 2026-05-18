@@ -5,6 +5,7 @@ import Btn from "../components/Btn";
 import { FeatureCard, RoleCard } from "../components/Cards";
 import { SearchIcon, DocIcon, ChartIcon, GradCapIcon, BuildingIcon, ShieldIcon, ArrowRight } from "../components/Icons";
 import { useNavigate } from "react-router-dom";
+import ThemeToggle from "../components/ThemeToggle";
 
 /* ── Animated floating orb ── */
 function Orb({ style }) {
@@ -123,14 +124,18 @@ export default function HomePage() {
             <a href="#features" className="hp-nav__link" onClick={() => setMenuOpen(false)}>Features</a>
             <a href="#roles"    className="hp-nav__link" onClick={() => setMenuOpen(false)}>For Who</a>
             <div className="hp-nav__sep" />
+            <ThemeToggle />
             <button className="hp-nav__btn hp-nav__btn--ghost" onClick={() => { navigate('/login'); setMenuOpen(false); }}>Log in</button>
             <button className="hp-nav__btn hp-nav__btn--primary" onClick={() => { navigate('/register'); setMenuOpen(false); }}>Get Started</button>
           </div>
-          <button className="hp-nav__burger" onClick={() => setMenuOpen(p => !p)} aria-label="Menu">
-            <span className={menuOpen ? "open" : ""} />
-            <span className={menuOpen ? "open" : ""} />
-            <span className={menuOpen ? "open" : ""} />
-          </button>
+          <div className="hp-nav__right-actions">
+            <ThemeToggle />
+            <button className="hp-nav__burger" onClick={() => setMenuOpen(p => !p)} aria-label="Menu">
+              <span className={menuOpen ? "open" : ""} />
+              <span className={menuOpen ? "open" : ""} />
+              <span className={menuOpen ? "open" : ""} />
+            </button>
+          </div>
         </div>
       </nav>
 

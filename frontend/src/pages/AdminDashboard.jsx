@@ -7,6 +7,7 @@ import NotificationBell from '../components/NotificationBell';
 import { ArrowRight, DocIcon, ChartIcon, UsersIcon, BuildingIcon, BriefcaseIcon, ShieldIcon } from '../components/Icons';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 const adminNavItems = [
   { id: 'dashboard',  label: 'Dashboard',        icon: <ChartIcon /> },
@@ -89,6 +90,7 @@ export default function AdminDashboard() {
             <h1 className="dashboard-header__title">Welcome, Admin</h1>
           </div>
           <div className="dashboard-header__actions">
+            <ThemeToggle />
             <NotificationBell />
             <Btn variant="admin-primary" style={{ padding: '10px 20px', fontSize: '14px' }} onClick={() => navigate('/admin/pending')}>
               <DocIcon /> Pending Reviews

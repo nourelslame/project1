@@ -7,6 +7,7 @@ import NotificationBell from '../components/NotificationBell';
 import { ArrowRight, DocIcon, ChartIcon, BuildingIcon, CheckIcon, UsersIcon, BriefcaseIcon } from '../components/Icons';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 const statusConfig = {
   PENDING:   { label: 'Pending',  color: '#f59e0b', bg: 'rgba(245,158,11,.12)' },
@@ -115,6 +116,7 @@ export default function CompanyDashboard() {
             <h1 className="dashboard-header__title">{companyName}</h1>
           </div>
           <div className="dashboard-header__actions">
+               <ThemeToggle />
             <NotificationBell />
             <Btn style={{ padding: '10px 20px', fontSize: '14px' }} onClick={() => navigate('/company/candidates')}>
               <UsersIcon /> View Candidates

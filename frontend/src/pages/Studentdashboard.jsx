@@ -8,6 +8,7 @@ import { ArrowRight, SearchIcon, DocIcon, ChartIcon, GradCapIcon, CheckIcon, Bui
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from '../components/ThemeToggle';
 
 const statusConfig = {
   PENDING:   { label: 'Pending',   color: '#f59e0b', bg: 'rgba(245,158,11,.12)'  },
@@ -223,6 +224,7 @@ export default function StudentDashboard() {
             <h1 className="dashboard-header__title">{displayName}</h1>
           </div>
           <div className="dashboard-header__actions">
+            <ThemeToggle />
             <NotificationBell />
             <Btn style={{ padding: '10px 20px', fontSize: '14px' }} onClick={() => navigate('/search')}>
               <SearchIcon /> Search Internships
@@ -300,8 +302,8 @@ export default function StudentDashboard() {
   style={{
     padding: '7px 12px',
     fontSize: '12px',
-    background: '#fff',
-    color: '#1f2937',
+    background:  '#6d28d9',
+    color: '#e8eff9',
     border: '1px solid #e5e7eb',
     boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
   }}

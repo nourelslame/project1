@@ -13,13 +13,12 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
+  const [error, setError]           = useState('');
+  const [loading, setLoading]       = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  // Send login request to the backend and redirect based on the user's role
   const handleLogin = async () => {
     if (!email || !password) { setError('Please enter your email and password.'); return; }
     setError('');
@@ -91,7 +90,12 @@ export default function LoginPage() {
 
           <div className="auth-options">
             <label className="checkbox-label">
-              <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} className="checkbox-input" />
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+                className="checkbox-input"
+              />
               <span className="checkbox-text">Remember me</span>
             </label>
             <button className="forgot-password-link" onClick={() => navigate('/forgot-password')}>
@@ -99,17 +103,39 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {error && <p className="auth-error">{error}</p>}
+          {/* دايماً في الـ DOM — visibility يمنع layout shift */}
+          <div
+            className="auth-error"
+            role="alert"
+            style={{
+              visibility: error ? 'visible' : 'hidden',
+              minHeight: '38px',
+              marginTop: '8px',
+            }}
+          >
+            {error || '\u00A0'}
+          </div>
 
-          <Btn variant="primary" full style={{ padding: '14px', fontSize: '15px', marginTop: '16px' }} onClick={handleLogin}>
+          <Btn
+            variant="primary"
+            full
+            style={{ padding: '14px', fontSize: '15px', marginTop: '8px' }}
+            onClick={handleLogin}
+          >
             {loading ? 'Signing in...' : <> Sign in <ArrowRight /> </>}
           </Btn>
 
-          <div className="divider"><div className="divider__line" /><span className="divider__text">OR</span><div className="divider__line" /></div>
+          <div className="divider">
+            <div className="divider__line" />
+            <span className="divider__text">OR</span>
+            <div className="divider__line" />
+          </div>
 
           <p className="auth-right__switch">
             Don't have an account?{' '}
-            <button className="auth-right__switch-btn" onClick={() => navigate('/register')}>Create one</button>
+            <button className="auth-right__switch-btn" onClick={() => navigate('/register')}>
+              Create one
+            </button>
           </p>
         </div>
       </div>

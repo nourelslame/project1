@@ -321,7 +321,7 @@ export default function CompanyCandidates() {
                 </div>
 
                 <div className="application-card__actions">
-                  <Btn variant="" style={{ padding: '8px 16px', fontSize: '13px' }}
+                  <Btn  style={{ padding: '8px 16px', fontSize: '13px' }}
                     onClick={() => setSelected(candidate)}>
                     View CV
                   </Btn>
