@@ -7076,3 +7076,232 @@ h1, h2, h3, h4, h5, h6, p, span, div, label, button {
   border-color: #fca5a5;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.07);
 }
+
+
+/* ════════════════════════════════════════════════════════════════
+   RESPONSIVE — DASHBOARD + SIDEBAR (Mobile First)
+   الـ sidebar يظهر في الأعلى على الشاشات الصغيرة
+   ════════════════════════════════════════════════════════════════ */
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   TABLET — 1024px
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 1024px) {
+  /* Dashboard grid: shrink sidebar */
+  .dashboard {
+    grid-template-columns: 200px 1fr;
+  }
+
+  .dashboard-main {
+    padding: 24px 28px;
+  }
+
+  /* Dashboard stats: 2 columns */
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-header__title {
+    font-size: 24px;
+  }
+
+  /* Dashboard grid inside: 1 column */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   MOBILE — 768px
+   الـ sidebar يتحول لشريط أفقي في الأعلى
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 768px) {
+
+  /* ── Dashboard layout: stack sidebar on top ── */
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 100dvh;
+  }
+
+  /* ── Sidebar: horizontal bar at top ── */
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: auto;
+    width: 100%;
+    flex-direction: column;
+    padding: 12px 16px 0;
+    border-right: none;
+    border-bottom: 1px solid var(--sidebar-border);
+    overflow-y: visible;
+    overflow-x: hidden;
+    z-index: 50;
+  }
+
+  /* Logo row: logo + user avatar side by side */
+  .sidebar__logo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 12px;
+    margin-bottom: 0;
+    border-bottom: none;
+  }
+
+  /* Nav items: horizontal scrollable row */
+  .sidebar__nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 4px;
+    padding-bottom: 12px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .sidebar__nav::-webkit-scrollbar { display: none; }
+
+  .sidebar__nav-item {
+    flex-shrink: 0;
+    width: auto;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  /* Hide label text on very small; keep icons visible */
+  .sidebar__nav-item span:not(.sidebar__nav-icon) {
+    display: inline; /* keep visible at 768 */
+  }
+
+  /* User section: move to logo row as small avatar only */
+  .sidebar__user {
+    margin-top: 0;
+    padding: 6px 8px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* Hide name & role text on mobile sidebar */
+  .sidebar__user-info { display: none; }
+
+  /* ── Dashboard main ── */
+  .dashboard-main {
+    padding: 20px 16px;
+    min-height: auto;
+  }
+
+  /* Header: stack vertically */
+  .dashboard-header {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-header__title {
+    font-size: 22px;
+  }
+
+  .dashboard-header__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Stats: 2 columns */
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .dash-stat {
+    padding: 16px 14px;
+  }
+
+  .dash-stat__value {
+    font-size: 22px;
+  }
+
+  /* Dashboard grid: single column */
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* ── student-layout (search/browse page) ── */
+  .student-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .student-sidebar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--sidebar-border);
+    padding: 10px 16px;
+    scrollbar-width: none;
+  }
+  .student-sidebar::-webkit-scrollbar { display: none; }
+
+  .student-main {
+    padding: 20px 16px;
+  }
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   SMALL MOBILE — 480px
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+@media (max-width: 480px) {
+
+  /* Stats: 1 column on very small screens */
+  .dashboard-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  /* Hide nav item text — icons only */
+  .sidebar__nav-item span:not(.sidebar__nav-icon) {
+    display: none;
+  }
+
+  .sidebar__nav-item {
+    padding: 8px 10px;
+    justify-content: center;
+  }
+
+  .dashboard-header__title {
+    font-size: 20px;
+  }
+
+  .dashboard-main {
+    padding: 16px 12px;
+  }
+
+  /* Navbar padding fix */
+  .navbar {
+    padding: 0 16px;
+  }
+
+  /* Hero section */
+  .hero {
+    padding: 90px 20px 60px;
+  }
+
+  /* Footer stack */
+  .footer {
+    flex-direction: column;
+    padding: 24px 20px;
+    text-align: center;
+  }
+}
