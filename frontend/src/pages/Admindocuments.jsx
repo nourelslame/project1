@@ -275,8 +275,8 @@ export default function AdminDocuments() {
               }}>
                 <DocIcon />
               </div>
-              <h3 style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>
-                Convention de Stage
+              <h3 style={{ color: '#ef1111', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>
+                Intership Agreement
               </h3>
               <p style={{ color: '#64748b', fontSize: 13 }}>Agreement Preview</p>
             </div>
@@ -285,7 +285,7 @@ export default function AdminDocuments() {
             <div className="doc-preview">
               <div className="doc-preview__header">
                 <div className="doc-preview__uni">UNIVERSITÉ SÉTIF 1 — FERHAT ABBAS</div>
-                <div className="doc-preview__title">CONVENTION DE STAGE</div>
+                <div className="doc-preview__title">Intership Agreement</div>
               </div>
               <div className="doc-preview__body">
                 {[
