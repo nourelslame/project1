@@ -324,7 +324,7 @@ export default function SearchInternships() {
           <div className="search-bar">
             <SearchIcon />
             <input type="text" className="search-bar__input"
-              placeholder="Search by title, company, or keyword..."
+              placeholder="Search by title, or keyword..."
               value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
         </div>
