@@ -118,13 +118,13 @@ function AgreementModal({ agreement, onClose }) {
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(124,58,237,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px', color: '#7c3aed' }}>
             <DocIcon />
           </div>
-          <h3 style={{ color: '#f1f5f9', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Convention de Stage</h3>
-          <p style={{ color: '#64748b', fontSize: 13 }}>Your validated internship agreement</p>
+          <h3 style={{ color: '#de0c0c', fontSize: 20, fontWeight: 700, marginBottom: 4 }}>Intership Agreement</h3>
+          <p style={{ color: '#8b6464', fontSize: 13 }}>Your validated internship agreement</p>
         </div>
         <div className="doc-preview">
           <div className="doc-preview__header">
             <div className="doc-preview__uni">UNIVERSITÉ ABDELHAMID MEHRI — CONSTANTINE 2</div>
-            <div className="doc-preview__title">CONVENTION DE STAGE</div>
+            <div className="doc-preview__title">Intership Agreement</div>
           </div>
           <div className="doc-preview__body">
             {[
