@@ -1931,17 +1931,17 @@ body {
 }
 
 .internship-card__location::before {
-  content: "📍";
+  content: "";
   font-size: 12px;
 }
 
 .internship-card__duration::before {
-  content: "⏱️";
+  content: "";
   font-size: 12px;
 }
 
 .internship-card__deadline::before {
-  content: "📅";
+  content: "";
   font-size: 12px;
 }
 
@@ -2286,17 +2286,21 @@ body {
 .application-card__detail::before {
   font-size: 12px;
 }
+#csc{
+  color: red;
+}
 
 .application-card__detail:nth-child(1)::before {
-  content: "📍";
+  content: "";
 }
 
 .application-card__detail:nth-child(2)::before {
-  content: "💼";
+  content: "";
+  
 }
 
 .application-card__detail:nth-child(3)::before {
-  content: "⏱️";
+  content: "";
 }
 
 .application-card__meta {
